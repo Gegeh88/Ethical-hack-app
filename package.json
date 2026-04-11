@@ -1,0 +1,33 @@
+{
+  "name": "haxvibe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "haxvibe — AI-assisted ethical hacking SaaS (monorepo root)",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "@types/node": "^20.17.10"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "msgpackr-extract",
+      "unrs-resolver",
+      "@tailwindcss/oxide",
+      "sharp"
+    ]
+  }
+}

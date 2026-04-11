@@ -1,0 +1,24 @@
+# haxvibe — local development environment
+# Postgres + Auth + Storage is managed by Supabase cloud (free tier).
+# This file runs only Redis (for BullMQ) locally.
+# Api, worker, and web run via `pnpm dev` on the host (not containerized in dev).
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: haxvibe-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
+
+volumes:
+  redis_data:
+    name: haxvibe_redis_data

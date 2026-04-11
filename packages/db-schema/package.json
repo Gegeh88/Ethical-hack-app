@@ -1,0 +1,10 @@
+{
+  "name": "@haxvibe/db-schema",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SQL migrations and seed data for the haxvibe Supabase project",
+  "scripts": {
+    "typecheck": "echo 'no typecheck for sql package'",
+    "clean": "echo 'nothing to clean'"
+  }
+}

@@ -189,6 +189,28 @@ export const VerificationTokenResponse = z.object({
 export type VerificationTokenResponse = z.infer<typeof VerificationTokenResponse>;
 
 // ============================================================
+// Scan request schemas
+// ============================================================
+
+export const CreateScanRequest = z.object({
+  domainId: z.string().uuid(),
+  type: ScanType,
+  consent: z.object({
+    tosVersion: z.string(),
+    sharedHostingAck: z.boolean().default(false),
+  }),
+});
+export type CreateScanRequest = z.infer<typeof CreateScanRequest>;
+
+export const ScanStreamState = z.object({
+  status: ScanStatus,
+  progress: z.number().int().min(0).max(100),
+  step: z.string().nullable(),
+  error: z.string().optional(),
+});
+export type ScanStreamState = z.infer<typeof ScanStreamState>;
+
+// ============================================================
 // Helpers
 // ============================================================
 export function severityRank(s: Severity): number {

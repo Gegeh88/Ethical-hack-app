@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
-import { LayoutDashboard, Globe, LogOut, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, Globe, ScanSearch, LogOut, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -18,6 +18,7 @@ import {
 const NAV_ITEMS = [
   { label: 'Irányítópult', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Domainek', href: '/domains', icon: Globe },
+  { label: 'Vizsgálatok', href: '/scans', icon: ScanSearch },
 ] as const;
 
 interface AppShellProps {

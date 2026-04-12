@@ -8,7 +8,9 @@ import authPlugin from './middleware/auth.js';
 import authRoutes from './routes/auth.routes.js';
 import domainRoutes from './routes/domains.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
+import scansRoutes from './routes/scans.routes.js';
 import { sql } from './lib/db.js';
+import { closeScanQueue } from './services/scan.service.js';
 
 async function buildServer() {
   const app = Fastify({
@@ -34,6 +36,7 @@ async function buildServer() {
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(domainRoutes, { prefix: '/api/v1/domains' });
   await app.register(verificationRoutes, { prefix: '/api/v1/domains' });
+  await app.register(scansRoutes, { prefix: '/api/v1/scans' });
 
   app.get('/api/v1/health', async () => {
     return {
@@ -54,6 +57,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'Shutting down gracefully');
     await app.close();
+    await closeScanQueue();
     await sql.end();
     process.exit(0);
   };

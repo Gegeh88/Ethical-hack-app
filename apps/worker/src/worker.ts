@@ -1,5 +1,9 @@
 import pino from 'pino';
+import { Worker } from 'bullmq';
 import { config } from './config.js';
+import { createRedisConnection, redisPub } from './lib/redis.js';
+import { sql } from './lib/db.js';
+import { processScanJob } from './processors/scan.processor.js';
 
 const logger = pino({
   level: config.LOG_LEVEL,
@@ -15,28 +19,61 @@ async function main() {
       service: 'haxvibe-worker',
       version: '0.1.0',
       env: config.NODE_ENV,
-      redis: config.REDIS_URL,
       concurrency: config.BULL_CONCURRENCY,
     },
-    'haxvibe-worker starting — Day 1 skeleton (no queues registered yet)',
+    'Starting worker',
   );
 
-  // TODO(day2): Register BullMQ workers for scan, report, verification queues
-  // TODO(day2): Initialize Redis pub/sub for scan progress emission
-  // TODO(day3): Load scanner agents (DomainVerification, PassiveScanner, NucleiScanner)
+  // -------------------------------------------------------
+  // Register BullMQ scan worker
+  // -------------------------------------------------------
+  const scanWorker = new Worker('scan', processScanJob, {
+    connection: createRedisConnection(),
+    concurrency: config.BULL_CONCURRENCY,
+    limiter: {
+      max: config.BULL_RATE_LIMIT_MAX,
+      duration: config.BULL_RATE_LIMIT_DURATION_MS,
+    },
+  });
 
+  scanWorker.on('completed', (job) => {
+    logger.info(
+      { jobId: job?.id, scanJobId: job?.data?.scanJobId },
+      'Scan job completed',
+    );
+  });
+
+  scanWorker.on('failed', (job, err) => {
+    logger.error(
+      { jobId: job?.id, scanJobId: job?.data?.scanJobId, err: err.message },
+      'Scan job failed',
+    );
+  });
+
+  scanWorker.on('error', (err) => {
+    logger.error({ err }, 'Scan worker error');
+  });
+
+  logger.info(
+    { concurrency: config.BULL_CONCURRENCY, rateLimit: config.BULL_RATE_LIMIT_MAX },
+    'Scan worker registered',
+  );
+
+  // TODO(day6): Register report worker
+  // TODO(day6): Register verification worker
+
+  // -------------------------------------------------------
+  // Graceful shutdown
+  // -------------------------------------------------------
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down worker');
-    // TODO: await Promise.all([scanWorker.close(), reportWorker.close(), verificationWorker.close()])
+    await scanWorker.close();
+    await redisPub.quit();
+    await sql.end();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
   process.on('SIGINT', () => void shutdown('SIGINT'));
-
-  // Keep process alive
-  setInterval(() => {
-    logger.debug('heartbeat');
-  }, 30_000);
 }
 
 main().catch((err) => {

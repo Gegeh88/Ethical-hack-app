@@ -8,6 +8,13 @@ import { config } from '../config.js';
 import { ForbiddenError, ValidationError, NotFoundError, RateLimitError } from '../lib/errors.js';
 import { checkScanQuota, checkScanTypeAllowed } from './quota.service.js';
 
+// Map ScanType enum to DB consent_records.scan_scope check constraint values
+const SCAN_SCOPE_MAP: Record<string, string> = {
+  passive: 'passive_only',
+  active: 'active_scan',
+  full: 'full',
+};
+
 // ---------------------------------------------------------------------------
 // BullMQ queue singleton (lazy-initialized to avoid blocking startup if Redis is down)
 // ---------------------------------------------------------------------------
@@ -148,7 +155,7 @@ export async function createScan(
       domain_id: domainId,
       user_id: userId,
       tos_version: consent.tosVersion,
-      scan_scope: type,
+      scan_scope: SCAN_SCOPE_MAP[type] ?? type,
       ip_address: req.ip,
       user_agent: req.headers['user-agent'] ?? null,
       shared_hosting_acknowledged: consent.sharedHostingAck,

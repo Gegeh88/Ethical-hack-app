@@ -7,7 +7,7 @@ const configSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
 
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.string().url().optional(),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
 
   GEMINI_API_KEY: z.string().min(20),

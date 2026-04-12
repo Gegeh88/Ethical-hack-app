@@ -17,5 +17,17 @@ export async function apiClient<T>(
     throw new Error(body?.error?.message ?? `API error ${res.status}`);
   }
 
-  return res.json();
+  const json = await res.json();
+
+  // API wraps every response in { data: ... } or { data: ..., total: ... }.
+  // Unwrap transparently so callers get the shape they expect.
+  // For paginated responses ({ data, total }), return as-is since `data` is the array.
+  if (json && typeof json === 'object' && 'data' in json && 'total' in json) {
+    return json as T;
+  }
+  if (json && typeof json === 'object' && 'data' in json) {
+    return json.data as T;
+  }
+
+  return json as T;
 }

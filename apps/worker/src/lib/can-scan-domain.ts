@@ -1,4 +1,4 @@
-import { sql } from './db.js';
+import { supabaseAdmin } from './supabase.js';
 
 /**
  * Defense-in-depth authorization check at the worker level.
@@ -15,38 +15,51 @@ export async function canScanDomain(
   requestedBy: string,
 ): Promise<{ host: string; isSharedHosting: boolean }> {
   // 1. Domain must be verified and not expired
-  const [domain] = await sql`
-    SELECT d.id, d.host, d.organization_id, d.is_shared_hosting,
-           d.verified_at, d.verification_expires_at
-    FROM domains d
-    WHERE d.id = ${domainId}
-      AND d.verified_at IS NOT NULL
-      AND d.verification_expires_at > now()
-  `;
+  const { data: domain, error: domainError } = await supabaseAdmin
+    .from('domains')
+    .select('id, host, organization_id, is_shared_hosting, verified_at, verification_expires_at')
+    .eq('id', domainId)
+    .not('verified_at', 'is', null)
+    .gt('verification_expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (domainError) {
+    throw new Error(`Failed to check domain: ${domainError.message}`);
+  }
 
   if (!domain) {
     throw new Error('Domain not found or verification expired');
   }
 
   // 2. Active consent record must exist
-  const [consent] = await sql`
-    SELECT id FROM consent_records
-    WHERE domain_id = ${domainId}
-      AND active = true
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
+  const { data: consent, error: consentError } = await supabaseAdmin
+    .from('consent_records')
+    .select('id')
+    .eq('domain_id', domainId)
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (consentError) {
+    throw new Error(`Failed to check consent: ${consentError.message}`);
+  }
 
   if (!consent) {
     throw new Error('No active consent record for this domain');
   }
 
   // 3. Requesting user must belong to the domain's organization
-  const [user] = await sql`
-    SELECT id FROM app_users
-    WHERE id = ${requestedBy}
-      AND organization_id = ${domain.organization_id}
-  `;
+  const { data: user, error: userError } = await supabaseAdmin
+    .from('app_users')
+    .select('id')
+    .eq('id', requestedBy)
+    .eq('organization_id', domain.organization_id as string)
+    .maybeSingle();
+
+  if (userError) {
+    throw new Error(`Failed to check user authorization: ${userError.message}`);
+  }
 
   if (!user) {
     throw new Error('User does not belong to the domain organization');

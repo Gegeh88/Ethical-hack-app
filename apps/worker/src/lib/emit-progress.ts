@@ -1,5 +1,5 @@
 import { redisPub } from './redis.js';
-import { sql } from './db.js';
+import { supabaseAdmin } from './supabase.js';
 
 /**
  * Emits scan progress via Redis pub/sub (for SSE consumers) and persists
@@ -21,10 +21,9 @@ export async function emitProgress(
   // Persist progress to DB so late subscribers can pick up current state
   if (type === 'progress' && typeof (payload as Record<string, unknown>)?.pct === 'number') {
     const p = payload as { pct: number; step?: string };
-    await sql`
-      UPDATE scan_jobs
-      SET progress = ${p.pct}, current_step = ${p.step ?? null}
-      WHERE id = ${scanJobId}
-    `;
+    await supabaseAdmin
+      .from('scan_jobs')
+      .update({ progress: p.pct, current_step: p.step ?? null })
+      .eq('id', scanJobId);
   }
 }

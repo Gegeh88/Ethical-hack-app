@@ -1,6 +1,6 @@
 import type { Logger } from 'pino';
 import { geminiFlash } from '../lib/gemini.js';
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { emitProgress } from '../lib/emit-progress.js';
 import { config } from '../config.js';
 import { calculateGeminiCost } from '../lib/cost-calculator.js';
@@ -37,6 +37,15 @@ interface SeverityCounts {
   info: number;
 }
 
+// Severity ordering for in-memory sort (lower = more severe)
+const SEVERITY_ORDER: Record<string, number> = {
+  critical: 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+  info: 5,
+};
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -68,15 +77,20 @@ export async function generateReport(
   // ------------------------------------------------------------------
   // 1. Fetch all findings for this scan, ordered by severity
   // ------------------------------------------------------------------
-  const findings = await sql<VulnerabilityRow[]>`
-    SELECT id, title, description, severity, template_id, cvss_score, cve, evidence
-    FROM vulnerabilities
-    WHERE scan_job_id = ${scanJobId}
-    ORDER BY CASE severity
-      WHEN 'critical' THEN 1 WHEN 'high' THEN 2
-      WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5
-    END, created_at ASC
-  `;
+  const { data: rawFindings, error: findingsError } = await supabaseAdmin
+    .from('vulnerabilities')
+    .select('id, title, description, severity, template_id, cvss_score, cve, evidence')
+    .eq('scan_job_id', scanJobId)
+    .order('created_at', { ascending: true });
+
+  if (findingsError) {
+    throw new Error(`Failed to fetch findings: ${findingsError.message}`);
+  }
+
+  // Sort by severity in-memory (Supabase REST doesn't support CASE ordering)
+  const findings = ((rawFindings ?? []) as unknown as VulnerabilityRow[]).sort(
+    (a, b) => (SEVERITY_ORDER[a.severity] ?? 5) - (SEVERITY_ORDER[b.severity] ?? 5),
+  );
 
   // ------------------------------------------------------------------
   // 2. Count by severity
@@ -154,11 +168,10 @@ export async function generateReport(
       );
 
       if (explanation) {
-        await sql`
-          UPDATE vulnerabilities
-          SET ai_explanation = ${JSON.stringify(explanation)}::jsonb
-          WHERE id = ${finding.id}
-        `;
+        await supabaseAdmin
+          .from('vulnerabilities')
+          .update({ ai_explanation: explanation })
+          .eq('id', finding.id);
         enrichedCount++;
       }
     } catch (err) {
@@ -175,16 +188,19 @@ export async function generateReport(
   // ------------------------------------------------------------------
   // 5. Create report record
   // ------------------------------------------------------------------
-  await sql`
-    INSERT INTO reports (scan_job_id, domain_id, summary_hu, finding_count, severity_counts)
-    VALUES (
-      ${scanJobId},
-      ${domainId},
-      ${summaryHu},
-      ${findings.length},
-      ${JSON.stringify(counts)}::jsonb
-    )
-  `;
+  const { error: reportError } = await supabaseAdmin
+    .from('reports')
+    .insert({
+      scan_job_id: scanJobId,
+      domain_id: domainId,
+      summary_hu: summaryHu,
+      finding_count: findings.length,
+      severity_counts: counts,
+    });
+
+  if (reportError) {
+    throw new Error(`Failed to create report: ${reportError.message}`);
+  }
 
   agentLogger.info(
     {
@@ -318,8 +334,15 @@ async function trackAiUsage(
 ): Promise<void> {
   const costUsd = calculateGeminiCost(model, inputTokens, outputTokens);
 
-  await sql`
-    INSERT INTO ai_usage (scan_job_id, organization_id, prompt_id, model, input_tokens, output_tokens, cost_usd)
-    VALUES (${scanJobId}, ${orgId}, ${promptId}, ${model}, ${inputTokens}, ${outputTokens}, ${costUsd})
-  `;
+  await supabaseAdmin
+    .from('ai_usage')
+    .insert({
+      scan_job_id: scanJobId,
+      organization_id: orgId,
+      prompt_id: promptId,
+      model,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      cost_usd: costUsd,
+    });
 }

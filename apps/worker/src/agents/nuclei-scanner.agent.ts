@@ -7,7 +7,7 @@ import { createReadStream } from 'node:fs';
 import type { Logger } from 'pino';
 import type { FindingInput } from './passive-scanner/types.js';
 import { emitProgress } from '../lib/emit-progress.js';
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { config } from '../config.js';
 import { assertValidHost } from '../lib/host-validator.js';
 
@@ -213,15 +213,18 @@ export async function runNucleiScan(
   await cleanupFile(outputFile);
 
   // Persist raw scan metadata for debugging / audit
-  await sql`
-    INSERT INTO scan_results (scan_job_id, agent, raw)
-    VALUES (${scanJobId}, 'nuclei', ${JSON.stringify({
-      findings: findings.length,
-      stderr_tail: stderrBuffer.slice(-2000),
-      exit_code: exitCode,
-      run_id: runId,
-    })}::jsonb)
-  `;
+  await supabaseAdmin
+    .from('scan_results')
+    .insert({
+      scan_job_id: scanJobId,
+      agent: 'nuclei',
+      raw: {
+        findings: findings.length,
+        stderr_tail: stderrBuffer.slice(-2000),
+        exit_code: exitCode,
+        run_id: runId,
+      },
+    });
 
   await emitProgress(scanJobId, 'progress', { step: 'nuclei', pct: 100 });
   logger.info({ findingCount: findings.length, runId }, 'Nuclei scan completed');

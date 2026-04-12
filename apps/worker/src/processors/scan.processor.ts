@@ -1,6 +1,6 @@
 import type { Job } from 'bullmq';
 import pino from 'pino';
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { emitProgress } from '../lib/emit-progress.js';
 import { assertValidHost } from '../lib/host-validator.js';
 import { canScanDomain } from '../lib/can-scan-domain.js';
@@ -49,10 +49,13 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     jobLogger.info('Verifying domain authorization');
 
     // Look up the scan job to get the requester
-    const [scanJob] = await sql`
-      SELECT requested_by FROM scan_jobs WHERE id = ${scanJobId}
-    `;
-    if (!scanJob) {
+    const { data: scanJob, error: scanJobError } = await supabaseAdmin
+      .from('scan_jobs')
+      .select('requested_by')
+      .eq('id', scanJobId)
+      .single();
+
+    if (scanJobError || !scanJob) {
       throw new Error(`Scan job ${scanJobId} not found`);
     }
 
@@ -65,10 +68,11 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     // -------------------------------------------------------
     // 1. Update status to running
     // -------------------------------------------------------
-    await sql`
-      UPDATE scan_jobs SET status = 'running', started_at = now()
-      WHERE id = ${scanJobId}
-    `;
+    await supabaseAdmin
+      .from('scan_jobs')
+      .update({ status: 'running', started_at: new Date().toISOString() })
+      .eq('id', scanJobId);
+
     await emitProgress(scanJobId, 'state', {
       status: 'running',
       progress: 0,
@@ -105,7 +109,12 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     jobLogger.info('Starting report generation');
     await emitProgress(scanJobId, 'progress', { step: 'report', pct: 80 });
     try {
-      const [scanRow] = await sql`SELECT organization_id FROM scan_jobs WHERE id = ${scanJobId}`;
+      const { data: scanRow } = await supabaseAdmin
+        .from('scan_jobs')
+        .select('organization_id')
+        .eq('id', scanJobId)
+        .single();
+
       if (scanRow) {
         await generateReport(
           scanJobId,
@@ -119,18 +128,21 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
       }
     } catch (err) {
       jobLogger.error({ err }, 'Report generation failed (non-fatal, scan still succeeds)');
-      // Report generation failure must not fail the entire scan.
-      // Partial results and findings are already persisted.
     }
 
     // -------------------------------------------------------
     // 6. Mark completed
     // -------------------------------------------------------
-    await sql`
-      UPDATE scan_jobs
-      SET status = 'completed', progress = 100, current_step = 'done', completed_at = now()
-      WHERE id = ${scanJobId}
-    `;
+    await supabaseAdmin
+      .from('scan_jobs')
+      .update({
+        status: 'completed',
+        progress: 100,
+        current_step: 'done',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', scanJobId);
+
     await emitProgress(scanJobId, 'done', { status: 'completed' });
 
     jobLogger.info(
@@ -139,19 +151,20 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack?.slice(0, 4000) : undefined;
     jobLogger.error({ err }, 'Scan failed');
 
-    await sql`
-      UPDATE scan_jobs
-      SET status = 'failed',
-          error_message = ${message},
-          error_stack = ${stack ?? null},
-          completed_at = now()
-      WHERE id = ${scanJobId}
-    `.catch((dbErr) => {
+    try {
+      await supabaseAdmin
+        .from('scan_jobs')
+        .update({
+          status: 'failed',
+          error_message: message,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', scanJobId);
+    } catch (dbErr) {
       jobLogger.error({ dbErr }, 'Failed to mark scan as failed in DB');
-    });
+    }
 
     await emitProgress(scanJobId, 'done', { status: 'failed', error: message }).catch((pubErr) => {
       jobLogger.warn({ pubErr }, 'Failed to emit failure progress');
@@ -163,8 +176,6 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
 
 /**
  * Insert findings into the vulnerabilities table.
- * Uses individual INSERT statements with parameterized queries
- * (postgres tagged template protects against SQL injection).
  */
 async function persistFindings(
   scanJobId: string,
@@ -172,26 +183,25 @@ async function persistFindings(
   findings: FindingInput[],
 ): Promise<void> {
   for (const f of findings) {
-    await sql`
-      INSERT INTO vulnerabilities (
-        scan_job_id, domain_id, source_agent, template_id,
-        title, description, severity, cvss_score,
-        cve, tags, matched_at, evidence
-      )
-      VALUES (
-        ${scanJobId},
-        ${domainId},
-        ${f.source_agent},
-        ${f.template_id},
-        ${f.title},
-        ${f.description ?? null},
-        ${f.severity}::severity_level,
-        ${f.cvss_score ?? null},
-        ${f.cve ?? []},
-        ${f.tags ?? []},
-        ${f.matched_at ?? null},
-        ${f.evidence ? JSON.stringify(f.evidence) : null}::jsonb
-      )
-    `;
+    const { error } = await supabaseAdmin
+      .from('vulnerabilities')
+      .insert({
+        scan_job_id: scanJobId,
+        domain_id: domainId,
+        source_agent: f.source_agent,
+        template_id: f.template_id,
+        title: f.title,
+        description: f.description ?? null,
+        severity: f.severity,
+        cvss_score: f.cvss_score ?? null,
+        cve: f.cve ?? [],
+        tags: f.tags ?? [],
+        matched_at: f.matched_at ?? null,
+        evidence: f.evidence ? f.evidence : null,
+      });
+
+    if (error) {
+      logger.warn({ error, finding: f.title }, 'Failed to persist finding');
+    }
   }
 }

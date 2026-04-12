@@ -15,6 +15,7 @@ interface Domain {
 interface ScanJob {
   id: string;
   domain_id: string;
+  host?: string;
   domain?: Domain;
   type: 'passive' | 'active' | 'full';
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -164,7 +165,7 @@ export default async function ScansPage() {
                             href={`/scans/${scan.id}`}
                             className="hover:text-pulse hover:underline"
                           >
-                            {scan.domain?.host ?? scan.domain_id}
+                            {scan.host ?? scan.domain?.host ?? scan.domain_id}
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-onSurface-variant">

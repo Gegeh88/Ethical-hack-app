@@ -4,7 +4,6 @@ import { CreateScanRequest, PaginationQuery, ScanStatus } from '@haxvibe/shared-
 import { z } from 'zod';
 import { config } from '../config.js';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { sql } from '../lib/db.js';
 import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { createScan, listScans, getScanById } from '../services/scan.service.js';
 
@@ -69,7 +68,24 @@ export default async function scansRoutes(fastify: FastifyInstance): Promise<voi
         query.status,
       );
 
-      return { data: result.data, total: result.total };
+      // Enrich scan list with domain hosts
+      const domainIds = [...new Set(result.data.map((s) => s.domain_id))];
+      const hostMap = new Map<string, string>();
+      if (domainIds.length > 0) {
+        const { data: domains } = await supabaseAdmin
+          .from('domains')
+          .select('id, host')
+          .in('id', domainIds);
+        for (const d of domains ?? []) {
+          hostMap.set(d.id as string, d.host as string);
+        }
+      }
+      const enriched = result.data.map((s) => ({
+        ...s,
+        host: hostMap.get(s.domain_id) ?? s.domain_id,
+      }));
+
+      return { data: enriched, total: result.total };
     },
   );
 
@@ -123,11 +139,13 @@ export default async function scansRoutes(fastify: FastifyInstance): Promise<voi
         return reply.unauthorized('Invalid or expired token');
       }
 
-      const [appUser] = await sql`
-        SELECT id, organization_id FROM app_users WHERE id = ${supabaseUser.id}
-      `;
+      const { data: appUser, error: appUserError } = await supabaseAdmin
+        .from('app_users')
+        .select('id, organization_id')
+        .eq('id', supabaseUser.id)
+        .single();
 
-      if (!appUser) {
+      if (appUserError || !appUser) {
         return reply.unauthorized('User not found');
       }
 
@@ -137,13 +155,14 @@ export default async function scansRoutes(fastify: FastifyInstance): Promise<voi
       // ------------------------------------------------------------------
       // Verify ownership: scan must belong to the user's organization
       // ------------------------------------------------------------------
-      const [scan] = await sql`
-        SELECT id, status, progress, current_step
-        FROM scan_jobs
-        WHERE id = ${id} AND organization_id = ${userOrgId}
-      `;
+      const { data: scan, error: scanError } = await supabaseAdmin
+        .from('scan_jobs')
+        .select('id, status, progress, current_step')
+        .eq('id', id)
+        .eq('organization_id', userOrgId)
+        .maybeSingle();
 
-      if (!scan) {
+      if (scanError || !scan) {
         throw new NotFoundError('Scan not found');
       }
 

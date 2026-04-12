@@ -2,7 +2,6 @@ import pino from 'pino';
 import { Worker } from 'bullmq';
 import { config } from './config.js';
 import { createRedisConnection, redisPub } from './lib/redis.js';
-import { sql } from './lib/db.js';
 import { processScanJob } from './processors/scan.processor.js';
 
 const logger = pino({
@@ -69,7 +68,6 @@ async function main() {
     logger.info({ signal }, 'Shutting down worker');
     await scanWorker.close();
     await redisPub.quit();
-    await sql.end();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

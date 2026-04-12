@@ -6,7 +6,7 @@ import { checkRobots } from './passive-scanner/robots.check.js';
 import { checkPorts } from './passive-scanner/ports.check.js';
 import { detectCms } from './passive-scanner/cms-detect.check.js';
 import { emitProgress } from '../lib/emit-progress.js';
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import type { FindingInput } from './passive-scanner/types.js';
 
 // Re-export FindingInput so the processor can use it
@@ -76,10 +76,13 @@ export async function runPassiveScan(
   );
 
   // Store raw results for debugging / audit
-  await sql`
-    INSERT INTO scan_results (scan_job_id, agent, raw)
-    VALUES (${scanJobId}, 'passive', ${JSON.stringify({ findings, host, checks: checks.map((c) => c.name) })}::jsonb)
-  `;
+  await supabaseAdmin
+    .from('scan_results')
+    .insert({
+      scan_job_id: scanJobId,
+      agent: 'passive',
+      raw: { findings, host, checks: checks.map((c) => c.name) },
+    });
 
   logger.info({ totalFindings: findings.length }, 'Passive scan completed');
   return findings;

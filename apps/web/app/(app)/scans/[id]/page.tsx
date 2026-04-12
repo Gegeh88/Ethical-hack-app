@@ -47,7 +47,14 @@ interface Report {
   pdf_url: string | null;
 }
 
+interface FindingSummary {
+  severity: string;
+  count: number;
+}
+
 interface ScanDetailResponse extends ScanJob {
+  host?: string;
+  findings_summary?: FindingSummary[];
   report?: Report;
 }
 
@@ -214,8 +221,19 @@ export default function ScanDetailPage() {
   if (!scan) return null;
 
   const report = scan.report;
-  const severityCounts = report?.severity_counts ?? {};
-  const totalFindings = report?.finding_count ?? 0;
+
+  // Build severity counts from findings_summary (API) or report (if available)
+  const severityCounts: SeverityCounts = report?.severity_counts ?? {};
+  let totalFindings = report?.finding_count ?? 0;
+
+  // If no report yet, derive from findings_summary
+  if (!report && scan.findings_summary && scan.findings_summary.length > 0) {
+    for (const fs of scan.findings_summary) {
+      const sev = fs.severity as keyof SeverityCounts;
+      severityCounts[sev] = (severityCounts[sev] ?? 0) + fs.count;
+      totalFindings += fs.count;
+    }
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -232,7 +250,7 @@ export default function ScanDetailPage() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1.5">
           <h1 className="font-mono text-2xl font-bold text-onSurface">
-            {scan.domain?.host ?? scan.domain_id}
+            {scan.host ?? scan.domain?.host ?? scan.domain_id}
           </h1>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-onSurface-variant">
@@ -327,7 +345,7 @@ export default function ScanDetailPage() {
       </Card>
 
       {/* Findings summary — shown when completed and report is available */}
-      {displayStatus === 'completed' && report && (
+      {displayStatus === 'completed' && (totalFindings > 0 || report) && (
         <Card>
           <CardHeader>
             <CardTitle>Eredmények összefoglalója</CardTitle>
@@ -380,7 +398,7 @@ export default function ScanDetailPage() {
             )}
 
             {/* Executive summary */}
-            {report.summary_hu && (
+            {report?.summary_hu && (
               <div className="border-l-2 border-outline-variant/40 bg-surface-mid p-4">
                 <p className="mb-2 font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                   AI összefoglaló
@@ -390,7 +408,7 @@ export default function ScanDetailPage() {
             )}
 
             {/* PDF download */}
-            {report.pdf_url && (
+            {report?.pdf_url && (
               <div>
                 <Button
                   variant="outline"
@@ -421,7 +439,7 @@ export default function ScanDetailPage() {
             <span className="text-onSurface-variant">Azonosító</span>
             <span className="font-mono text-xs text-onSurface">{scan.id}</span>
             <span className="text-onSurface-variant">Domain</span>
-            <span className="font-mono text-onSurface">{scan.domain?.host ?? scan.domain_id}</span>
+            <span className="font-mono text-onSurface">{scan.host ?? scan.domain?.host ?? scan.domain_id}</span>
             <span className="text-onSurface-variant">Típus</span>
             <span className="text-onSurface">{typeLabel(scan.type)}</span>
             <span className="text-onSurface-variant">Állapot</span>

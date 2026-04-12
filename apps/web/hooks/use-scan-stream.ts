@@ -29,7 +29,7 @@ export function useScanStream(
   useEffect(() => {
     if (!scanId || !token) return;
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/scans/${scanId}/stream?access_token=${encodeURIComponent(token)}`;
+    const url = `/api/v1/scans/${scanId}/stream?access_token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
 
     es.addEventListener('state', (e) => {

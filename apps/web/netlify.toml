@@ -1,6 +1,6 @@
 [build]
-  command = "cd ../.. && npm i -g pnpm && pnpm install && pnpm build --filter @haxvibe/web"
-  publish = ".next"
+  command = "npm i -g pnpm --force && pnpm install && pnpm build --filter @haxvibe/web"
+  publish = "apps/web/.next"
 
 [build.environment]
   NODE_VERSION = "22"

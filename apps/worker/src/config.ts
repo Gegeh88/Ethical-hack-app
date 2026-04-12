@@ -21,6 +21,8 @@ const configSchema = z.object({
   NUCLEI_MAX_DURATION_MS: z.coerce.number().default(1_800_000),
   NUCLEI_RATE_LIMIT: z.coerce.number().default(100),
   NUCLEI_CONCURRENCY: z.coerce.number().default(10),
+  NUCLEI_IMAGE: z.string().default('projectdiscovery/nuclei:v3'),
+  NUCLEI_NETWORK: z.string().default('nuclei-outbound'),
   SCANNER_TMP_DIR: z.string().default('/tmp/scanner'),
 });
 

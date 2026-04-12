@@ -22,3 +22,11 @@ services:
 volumes:
   redis_data:
     name: haxvibe_redis_data
+
+# The nuclei-outbound network is created by scripts/setup-nuclei-network.sh
+# Nuclei containers are spawned dynamically by the worker process,
+# they are NOT defined as services in this file.
+networks:
+  nuclei-outbound:
+    name: nuclei-outbound
+    external: true

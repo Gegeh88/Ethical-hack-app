@@ -3,7 +3,7 @@
  * Maps directly to the `vulnerabilities` table columns.
  */
 export interface FindingInput {
-  source_agent: 'passive';
+  source_agent: 'passive' | 'nuclei';
   template_id: string;
   title: string;
   description?: string | null;

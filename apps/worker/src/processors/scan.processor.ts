@@ -5,6 +5,7 @@ import { emitProgress } from '../lib/emit-progress.js';
 import { assertValidHost } from '../lib/host-validator.js';
 import { canScanDomain } from '../lib/can-scan-domain.js';
 import { runPassiveScan } from '../agents/passive-scanner.agent.js';
+import { runNucleiScan } from '../agents/nuclei-scanner.agent.js';
 import type { FindingInput } from '../agents/passive-scanner.agent.js';
 
 /**
@@ -16,6 +17,7 @@ export interface ScanJobData {
   domainId: string;
   host: string;
   type: 'passive' | 'active' | 'full';
+  isSharedHosting: boolean;
 }
 
 const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
@@ -28,7 +30,7 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
  * 2. Validate host format (strict regex)
  * 3. Update status to running
  * 4. Run passive scan (always)
- * 5. TODO(day6): Run Nuclei active scan if type is active/full
+ * 5. Run Nuclei active scan if type is active/full
  * 6. Persist vulnerabilities
  * 7. Mark completed
  *
@@ -79,19 +81,21 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     const passiveFindings = await runPassiveScan(scanJobId, host, jobLogger);
 
     // -------------------------------------------------------
-    // 3. TODO(day6): If type is 'active' or 'full', run NucleiScannerAgent
+    // 3. Run Nuclei active scan if type is active or full
     // -------------------------------------------------------
-    // if (type === 'active' || type === 'full') {
-    //   jobLogger.info('Starting Nuclei active scan');
-    //   const nucleiFindings = await runNucleiScan(scanJobId, host, jobLogger);
-    //   allFindings.push(...nucleiFindings);
-    // }
+    let nucleiFindings: FindingInput[] = [];
+    if (type === 'active' || type === 'full') {
+      jobLogger.info('Starting Nuclei active scan');
+      await emitProgress(scanJobId, 'progress', { step: 'nuclei', pct: 50 });
+      nucleiFindings = await runNucleiScan(scanJobId, host, job.data.isSharedHosting, jobLogger);
+    }
 
     // -------------------------------------------------------
     // 4. Persist vulnerabilities to DB
     // -------------------------------------------------------
-    if (passiveFindings.length > 0) {
-      await persistFindings(scanJobId, domainId, passiveFindings);
+    const allFindings = [...passiveFindings, ...nucleiFindings];
+    if (allFindings.length > 0) {
+      await persistFindings(scanJobId, domainId, allFindings);
     }
 
     // -------------------------------------------------------
@@ -104,7 +108,10 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     `;
     await emitProgress(scanJobId, 'done', { status: 'completed' });
 
-    jobLogger.info({ findingCount: passiveFindings.length }, 'Scan completed');
+    jobLogger.info(
+      { findingCount: allFindings.length, passive: passiveFindings.length, nuclei: nucleiFindings.length },
+      'Scan completed',
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const stack = err instanceof Error ? err.stack?.slice(0, 4000) : undefined;

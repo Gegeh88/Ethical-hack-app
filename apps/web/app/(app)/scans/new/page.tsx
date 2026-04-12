@@ -8,7 +8,7 @@ import { apiClient } from '@/lib/api-client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ShieldCheck, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Domain {
@@ -38,6 +38,7 @@ export default function NewScanPage() {
   const [domainsError, setDomainsError] = useState<string | null>(null);
 
   const [selectedDomainId, setSelectedDomainId] = useState<string>('');
+  const [scanType, setScanType] = useState<'passive' | 'active' | 'full'>('passive');
   const [tosAccepted, setTosAccepted] = useState(false);
   const [sharedHostingAck, setSharedHostingAck] = useState(false);
 
@@ -97,7 +98,7 @@ export default function NewScanPage() {
         token,
         body: JSON.stringify({
           domainId: selectedDomainId,
-          type: 'passive',
+          type: scanType,
           consent: {
             tosVersion: TOS_VERSION,
             sharedHostingAck: needsSharedHostingAck ? sharedHostingAck : false,
@@ -192,31 +193,41 @@ export default function NewScanPage() {
           <CardHeader>
             <CardTitle>2. Vizsgálat típusa</CardTitle>
             <CardDescription>
-              A 4. napon csak passzív vizsgálat érhető el.
+              Válaszd ki, milyen mélységű vizsgálatot szeretnél indítani.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <ScanTypeOption
               id="type-passive"
               label="Passzív vizsgálat"
-              description="DNS, SSL, HTTP fejlécek és nyilvánosan elérhető információk elemzése. Nem küld aktív kéréseket a szervernek."
-              selected
-              disabled={false}
+              description="SSL, fejlécek, DNS, robots.txt, port scan, CMS felismerés"
+              selected={scanType === 'passive'}
+              onChange={() => setScanType('passive')}
             />
             <ScanTypeOption
               id="type-active"
               label="Aktív vizsgálat"
-              description="Hálózati szkenner futtatása célzott kérésekkel. Hamarosan elérhető."
-              selected={false}
-              disabled
+              description="Nuclei sérülékenységi sablonok (CVE-k, konfigurációs hibák, kitettségek)"
+              selected={scanType === 'active'}
+              onChange={() => setScanType('active')}
             />
             <ScanTypeOption
               id="type-full"
               label="Teljes vizsgálat"
-              description="Passzív + aktív + Nuclei template alapú vizsgálat. Hamarosan elérhető."
-              selected={false}
-              disabled
+              description="Passzív + aktív vizsgálat együtt (ajánlott)"
+              selected={scanType === 'full'}
+              onChange={() => setScanType('full')}
             />
+
+            {(scanType === 'active' || scanType === 'full') && (
+              <div className="mt-2 flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
+                <Info className="mt-0.5 size-4 shrink-0 text-yellow-700" />
+                <p className="text-sm text-yellow-800">
+                  Az aktív vizsgálat tesztkéréseket küld a célszerverre. Ez akár 30 percig is
+                  tarthat. Csak saját tulajdonú, igazolt domaineken végezze!
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -319,23 +330,20 @@ function ScanTypeOption({
   label,
   description,
   selected,
-  disabled,
+  onChange,
 }: {
   id: string;
   label: string;
   description: string;
   selected: boolean;
-  disabled: boolean;
+  onChange: () => void;
 }) {
   return (
     <label
       htmlFor={id}
       className={cn(
         'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
-        selected && !disabled
-          ? 'border-brand-600/40 bg-brand-50'
-          : 'border-border',
-        disabled && 'cursor-not-allowed opacity-50',
+        selected ? 'border-brand-600/40 bg-brand-50' : 'border-border hover:border-border/80',
       )}
     >
       <input
@@ -344,18 +352,12 @@ function ScanTypeOption({
         name="scan-type"
         value={id.replace('type-', '')}
         checked={selected}
-        disabled={disabled}
-        readOnly
+        onChange={onChange}
         className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
       />
       <div className="flex flex-col gap-0.5">
         <span className="text-sm font-medium">{label}</span>
         <span className="text-xs text-muted-foreground">{description}</span>
-        {disabled && (
-          <span className="mt-1 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-            Hamarosan
-          </span>
-        )}
       </div>
     </label>
   );

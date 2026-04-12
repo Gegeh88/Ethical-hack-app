@@ -19,17 +19,55 @@ export const SubscriptionTier = z.enum(['free', 'pro', 'business']);
 export type SubscriptionTier = z.infer<typeof SubscriptionTier>;
 
 // ============================================================
-// Core entities (placeholder — expanded Day 2+)
+// Core entities
 // ============================================================
+
+export const UserRole = z.enum(['owner', 'admin', 'member']);
+export type UserRole = z.infer<typeof UserRole>;
+
+export const Organization = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(2).max(200),
+  billing_email: z.string().email(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+export type Organization = z.infer<typeof Organization>;
+
+export const AppUser = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid().nullable(),
+  display_name: z.string().nullable(),
+  role: UserRole,
+  locale: z.string(),
+  totp_enabled: z.boolean(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+export type AppUser = z.infer<typeof AppUser>;
+
+export const Subscription = z.object({
+  id: z.string().uuid(),
+  organization_id: z.string().uuid(),
+  tier: SubscriptionTier,
+  status: z.string(),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+export type Subscription = z.infer<typeof Subscription>;
+
 export const Domain = z.object({
   id: z.string().uuid(),
   organization_id: z.string().uuid(),
+  added_by: z.string().uuid().nullable(),
   host: z.string(),
   verified_at: z.string().datetime().nullable(),
   verification_method: VerificationMethod.nullable(),
   verification_expires_at: z.string().datetime().nullable(),
   is_shared_hosting: z.boolean(),
+  notes: z.string().nullable(),
   created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
 });
 export type Domain = z.infer<typeof Domain>;
 
@@ -75,6 +113,35 @@ export const EnrichedFinding = Finding.extend({
   }),
 });
 export type EnrichedFinding = z.infer<typeof EnrichedFinding>;
+
+// ============================================================
+// Request / response schemas
+// ============================================================
+
+export const RegisterOrgRequest = z.object({
+  name: z.string().min(2).max(200),
+  billingEmail: z.string().email(),
+});
+export type RegisterOrgRequest = z.infer<typeof RegisterOrgRequest>;
+
+export const CreateDomainRequest = z.object({
+  host: z.string().regex(/^[a-z0-9][-a-z0-9.]*\.[a-z]{2,}$/, 'Invalid domain format (use lowercase, e.g. example.com)'),
+  is_shared_hosting: z.boolean().default(false),
+});
+export type CreateDomainRequest = z.infer<typeof CreateDomainRequest>;
+
+export const PaginationQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+export type PaginationQuery = z.infer<typeof PaginationQuery>;
+
+export const MeResponse = z.object({
+  user: AppUser,
+  org: Organization.nullable(),
+  subscription: Subscription.nullable(),
+});
+export type MeResponse = z.infer<typeof MeResponse>;
 
 // ============================================================
 // Helpers

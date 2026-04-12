@@ -3,6 +3,11 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import { config } from './config.js';
+import errorHandlerPlugin from './plugins/error-handler.js';
+import authPlugin from './middleware/auth.js';
+import authRoutes from './routes/auth.routes.js';
+import domainRoutes from './routes/domains.routes.js';
+import { sql } from './lib/db.js';
 
 async function buildServer() {
   const app = Fastify({
@@ -23,6 +28,10 @@ async function buildServer() {
     credentials: true,
   });
   await app.register(sensible);
+  await app.register(errorHandlerPlugin);
+  await app.register(authPlugin);
+  await app.register(authRoutes, { prefix: '/api/v1/auth' });
+  await app.register(domainRoutes, { prefix: '/api/v1/domains' });
 
   app.get('/api/v1/health', async () => {
     return {
@@ -43,6 +52,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'Shutting down gracefully');
     await app.close();
+    await sql.end();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

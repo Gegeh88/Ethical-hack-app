@@ -2,7 +2,6 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import type { UserRole } from '@haxvibe/shared-types';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { sql } from '../lib/db.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -39,15 +38,15 @@ async function authPlugin(fastify: FastifyInstance): Promise<void> {
       return reply.unauthorized('Invalid or expired token');
     }
 
-    // Fetch the app_users row for this auth user
-    const [appUser] = await sql`
-      SELECT id, organization_id, role
-      FROM app_users
-      WHERE id = ${supabaseUser.id}
-    `;
+    // Fetch the app_users row via Supabase REST (avoids direct Postgres dependency in auth path)
+    const { data: appUser, error: appUserError } = await supabaseAdmin
+      .from('app_users')
+      .select('id, organization_id, role')
+      .eq('id', supabaseUser.id)
+      .single();
 
-    if (!appUser) {
-      req.log.warn({ supabaseUserId: supabaseUser.id }, 'No app_users row found for authenticated user');
+    if (appUserError || !appUser) {
+      req.log.warn({ supabaseUserId: supabaseUser.id, error: appUserError?.message }, 'No app_users row found');
       return reply.unauthorized('User profile not found');
     }
 

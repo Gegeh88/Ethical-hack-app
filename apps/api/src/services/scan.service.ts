@@ -2,7 +2,7 @@ import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import type { FastifyRequest } from 'fastify';
 import type { ScanType as ScanTypeEnum, ScanStatus as ScanStatusEnum } from '@haxvibe/shared-types';
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { audit } from '../lib/audit.js';
 import { config } from '../config.js';
 import { ForbiddenError, ValidationError, NotFoundError, RateLimitError } from '../lib/errors.js';
@@ -93,14 +93,18 @@ export async function createScan(
   }
 
   // 1. Verify domain belongs to org AND is verified (not expired)
-  const [domain] = await sql`
-    SELECT id, host, is_shared_hosting
-    FROM domains
-    WHERE id = ${domainId}
-      AND organization_id = ${orgId}
-      AND verified_at IS NOT NULL
-      AND verification_expires_at > now()
-  `;
+  const { data: domain, error: domainError } = await supabaseAdmin
+    .from('domains')
+    .select('id, host, is_shared_hosting')
+    .eq('id', domainId)
+    .eq('organization_id', orgId)
+    .not('verified_at', 'is', null)
+    .gt('verification_expires_at', new Date().toISOString())
+    .maybeSingle();
+
+  if (domainError) {
+    throw new Error(`Failed to verify domain: ${domainError.message}`);
+  }
 
   if (!domain) {
     throw new ForbiddenError(
@@ -123,69 +127,55 @@ export async function createScan(
   }
 
   // 4. No active scan already running for this domain
-  const [activeCount] = await sql`
-    SELECT count(*)::int AS cnt
-    FROM scan_jobs
-    WHERE domain_id = ${domainId}
-      AND status IN ('queued', 'running')
-  `;
+  const { count: activeCount, error: activeError } = await supabaseAdmin
+    .from('scan_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('domain_id', domainId)
+    .in('status', ['queued', 'running']);
 
-  if (activeCount && (activeCount.cnt as number) > 0) {
+  if (activeError) {
+    throw new Error(`Failed to check active scans: ${activeError.message}`);
+  }
+
+  if (activeCount && activeCount > 0) {
     throw new ValidationError('A scan is already running for this domain');
   }
 
   // 5. Create consent record
-  const [consentRecord] = await sql`
-    INSERT INTO consent_records (
-      domain_id,
-      user_id,
-      tos_version,
-      scan_scope,
-      ip_address,
-      user_agent,
-      shared_hosting_acknowledged
-    )
-    VALUES (
-      ${domainId},
-      ${userId},
-      ${consent.tosVersion},
-      ${type},
-      ${req.ip}::inet,
-      ${req.headers['user-agent'] ?? null},
-      ${consent.sharedHostingAck}
-    )
-    RETURNING id
-  `;
+  const { data: consentRecord, error: consentError } = await supabaseAdmin
+    .from('consent_records')
+    .insert({
+      domain_id: domainId,
+      user_id: userId,
+      tos_version: consent.tosVersion,
+      scan_scope: type,
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent'] ?? null,
+      shared_hosting_acknowledged: consent.sharedHostingAck,
+    })
+    .select('id')
+    .single();
 
-  if (!consentRecord) {
-    throw new Error('Failed to create consent record');
+  if (consentError || !consentRecord) {
+    throw new Error(`Failed to create consent record: ${consentError?.message ?? 'no data returned'}`);
   }
 
   // 6. Create scan job
-  const [scanJob] = await sql`
-    INSERT INTO scan_jobs (
-      organization_id,
-      domain_id,
-      requested_by,
-      consent_record_id,
+  const { data: scanJob, error: scanJobError } = await supabaseAdmin
+    .from('scan_jobs')
+    .insert({
+      organization_id: orgId,
+      domain_id: domainId,
+      requested_by: userId,
+      consent_record_id: consentRecord.id,
       type,
-      status
-    )
-    VALUES (
-      ${orgId},
-      ${domainId},
-      ${userId},
-      ${consentRecord.id},
-      ${type},
-      'queued'
-    )
-    RETURNING id, organization_id, domain_id, requested_by, consent_record_id,
-              type, status, progress, current_step, bull_job_id,
-              queued_at, started_at, completed_at, error_message
-  `;
+      status: 'queued',
+    })
+    .select('id, organization_id, domain_id, requested_by, consent_record_id, type, status, progress, current_step, bull_job_id, queued_at, started_at, completed_at, error_message')
+    .single();
 
-  if (!scanJob) {
-    throw new Error('Failed to create scan job');
+  if (scanJobError || !scanJob) {
+    throw new Error(`Failed to create scan job: ${scanJobError?.message ?? 'no data returned'}`);
   }
 
   // 7. Audit log
@@ -212,11 +202,10 @@ export async function createScan(
   });
 
   // 9. Update scan_jobs with bull_job_id
-  await sql`
-    UPDATE scan_jobs
-    SET bull_job_id = ${bullJob.id ?? null}
-    WHERE id = ${scanJob.id}
-  `;
+  await supabaseAdmin
+    .from('scan_jobs')
+    .update({ bull_job_id: bullJob.id ?? null })
+    .eq('id', scanJob.id);
 
   return {
     ...(scanJob as unknown as ScanJobRow),
@@ -237,30 +226,49 @@ export async function listScans(
 ): Promise<ListScansResult> {
   const offset = (page - 1) * limit;
 
-  // Build WHERE conditions dynamically
-  const [countResult] = await sql`
-    SELECT count(*)::int AS total
-    FROM scan_jobs
-    WHERE organization_id = ${orgId}
-      ${domainId ? sql`AND domain_id = ${domainId}` : sql``}
-      ${status ? sql`AND status = ${status}` : sql``}
-  `;
+  // Build count query with optional filters
+  let countQuery = supabaseAdmin
+    .from('scan_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', orgId);
 
-  const rows = await sql`
-    SELECT id, organization_id, domain_id, requested_by, consent_record_id,
-           type, status, progress, current_step, bull_job_id,
-           queued_at, started_at, completed_at, error_message
-    FROM scan_jobs
-    WHERE organization_id = ${orgId}
-      ${domainId ? sql`AND domain_id = ${domainId}` : sql``}
-      ${status ? sql`AND status = ${status}` : sql``}
-    ORDER BY queued_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  if (domainId) {
+    countQuery = countQuery.eq('domain_id', domainId);
+  }
+  if (status) {
+    countQuery = countQuery.eq('status', status);
+  }
+
+  const { count, error: countError } = await countQuery;
+
+  if (countError) {
+    throw new Error(`Failed to count scans: ${countError.message}`);
+  }
+
+  // Build data query with optional filters
+  let dataQuery = supabaseAdmin
+    .from('scan_jobs')
+    .select('id, organization_id, domain_id, requested_by, consent_record_id, type, status, progress, current_step, bull_job_id, queued_at, started_at, completed_at, error_message')
+    .eq('organization_id', orgId)
+    .order('queued_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (domainId) {
+    dataQuery = dataQuery.eq('domain_id', domainId);
+  }
+  if (status) {
+    dataQuery = dataQuery.eq('status', status);
+  }
+
+  const { data: rows, error: rowsError } = await dataQuery;
+
+  if (rowsError) {
+    throw new Error(`Failed to list scans: ${rowsError.message}`);
+  }
 
   return {
-    data: rows as unknown as ScanJobRow[],
-    total: (countResult?.total as number) ?? 0,
+    data: (rows ?? []) as unknown as ScanJobRow[],
+    total: count ?? 0,
   };
 }
 
@@ -272,33 +280,59 @@ export async function getScanById(
   orgId: string,
   scanId: string,
 ): Promise<ScanDetailResult> {
-  const [scan] = await sql`
-    SELECT sj.id, sj.organization_id, sj.domain_id, sj.requested_by,
-           sj.consent_record_id, sj.type, sj.status, sj.progress,
-           sj.current_step, sj.bull_job_id, sj.queued_at, sj.started_at,
-           sj.completed_at, sj.error_message,
-           d.host
-    FROM scan_jobs sj
-    JOIN domains d ON d.id = sj.domain_id
-    WHERE sj.id = ${scanId}
-      AND sj.organization_id = ${orgId}
-  `;
+  // Fetch scan job
+  const { data: scanJob, error: scanError } = await supabaseAdmin
+    .from('scan_jobs')
+    .select('id, organization_id, domain_id, requested_by, consent_record_id, type, status, progress, current_step, bull_job_id, queued_at, started_at, completed_at, error_message')
+    .eq('id', scanId)
+    .eq('organization_id', orgId)
+    .maybeSingle();
 
-  if (!scan) {
+  if (scanError) {
+    throw new Error(`Failed to fetch scan: ${scanError.message}`);
+  }
+
+  if (!scanJob) {
     throw new NotFoundError('Scan not found');
   }
 
+  // Fetch domain host separately (replaces the SQL JOIN)
+  const { data: domain, error: domainError } = await supabaseAdmin
+    .from('domains')
+    .select('host')
+    .eq('id', scanJob.domain_id)
+    .single();
+
+  if (domainError || !domain) {
+    throw new Error(`Failed to fetch domain for scan: ${domainError?.message ?? 'domain not found'}`);
+  }
+
   // Fetch findings summary grouped by severity
-  const severityCounts = await sql`
-    SELECT severity::text, count(*)::int
-    FROM vulnerabilities
-    WHERE scan_job_id = ${scanId}
-    GROUP BY severity
-  `;
+  // Supabase REST does not support GROUP BY + count, so we fetch all severity
+  // values and aggregate in JS.
+  const { data: vulns, error: vulnError } = await supabaseAdmin
+    .from('vulnerabilities')
+    .select('severity')
+    .eq('scan_job_id', scanId);
+
+  if (vulnError) {
+    throw new Error(`Failed to fetch findings summary: ${vulnError.message}`);
+  }
+
+  const severityMap = new Map<string, number>();
+  for (const v of vulns ?? []) {
+    const sev = v.severity as string;
+    severityMap.set(sev, (severityMap.get(sev) ?? 0) + 1);
+  }
+
+  const findings_summary: SeverityCount[] = Array.from(severityMap.entries()).map(
+    ([severity, count]) => ({ severity, count }),
+  );
 
   return {
-    ...(scan as unknown as ScanJobWithDomain),
-    findings_summary: severityCounts as unknown as SeverityCount[],
+    ...(scanJob as unknown as ScanJobWithDomain),
+    host: domain.host as string,
+    findings_summary,
   };
 }
 

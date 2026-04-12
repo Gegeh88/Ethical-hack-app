@@ -59,8 +59,9 @@ async function errorHandlerPlugin(fastify: FastifyInstance): Promise<void> {
     // Unknown / internal errors: log full details, return generic message
     req.log.error({ err: error, requestId }, 'Unhandled error');
 
+    const isDev = process.env.NODE_ENV === 'development';
     return reply.status(500).send(
-      buildErrorResponse('INTERNAL', 'Internal server error', requestId),
+      buildErrorResponse('INTERNAL', isDev ? error.message : 'Internal server error', requestId, isDev ? error.stack : undefined),
     );
   });
 }

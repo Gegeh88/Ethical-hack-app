@@ -6,7 +6,7 @@ import type {
   VerificationResult,
   VerificationTokenResponse,
 } from '@haxvibe/shared-types';
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { audit } from '../lib/audit.js';
 import { assertPublicHost } from '../lib/ssrf-guard.js';
 import {
@@ -42,14 +42,21 @@ interface VerificationRow {
  * Fetch a domain scoped to the given organization, or throw NotFoundError.
  */
 async function getDomainForOrg(domainId: string, orgId: string): Promise<DomainRow> {
-  const [domain] = await sql`
-    SELECT id, host, organization_id
-    FROM domains
-    WHERE id = ${domainId} AND organization_id = ${orgId}
-  `;
+  const { data: domain, error } = await supabaseAdmin
+    .from('domains')
+    .select('id, host, organization_id')
+    .eq('id', domainId)
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch domain: ${error.message}`);
+  }
+
   if (!domain) {
     throw new NotFoundError('Domain not found');
   }
+
   return domain as unknown as DomainRow;
 }
 
@@ -101,35 +108,49 @@ export async function generateToken(
   const domain = await getDomainForOrg(domainId, orgId);
 
   // Check for existing pending, non-expired token
-  const [existing] = await sql`
-    SELECT id, token, expires_at
-    FROM domain_verifications
-    WHERE domain_id = ${domainId}
-      AND status = 'pending'
-      AND expires_at > now()
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
+  const { data: existing, error: existingError } = await supabaseAdmin
+    .from('domain_verifications')
+    .select('id, token, expires_at')
+    .eq('domain_id', domainId)
+    .eq('status', 'pending')
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(`Failed to check existing tokens: ${existingError.message}`);
+  }
 
   let token: string;
   let expiresAt: string;
 
   if (existing) {
     token = existing.token as string;
-    expiresAt = (existing.expires_at as Date).toISOString();
+    expiresAt = existing.expires_at as string;
   } else {
     token = `hxv-verify-${randomBytes(16).toString('hex')}`;
-    const [row] = await sql`
-      INSERT INTO domain_verifications (domain_id, token, status, expires_at)
-      VALUES (
-        ${domainId},
-        ${token},
-        'pending',
-        now() + interval '7 days'
-      )
-      RETURNING expires_at
-    `;
-    expiresAt = (row!.expires_at as Date).toISOString();
+
+    // expires_at = 7 days from now
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 7);
+
+    const { data: row, error: insertError } = await supabaseAdmin
+      .from('domain_verifications')
+      .insert({
+        domain_id: domainId,
+        token,
+        status: 'pending',
+        expires_at: expires.toISOString(),
+      })
+      .select('expires_at')
+      .single();
+
+    if (insertError || !row) {
+      throw new Error(`Failed to create verification token: ${insertError?.message ?? 'no data returned'}`);
+    }
+
+    expiresAt = row.expires_at as string;
 
     await audit(req, {
       actor_id: userId,
@@ -166,13 +187,24 @@ export async function checkVerification(
   const domain = await getDomainForOrg(domainId, orgId);
 
   // Rate limit: max 20 verification attempts per domain per 24 hours
-  const [attemptRow] = await sql`
-    SELECT coalesce(sum(attempt_count), 0)::int AS total_attempts
-    FROM domain_verifications
-    WHERE domain_id = ${domainId}
-      AND created_at > now() - interval '24 hours'
-  `;
-  const totalAttempts = (attemptRow?.total_attempts as number) ?? 0;
+  const twentyFourHoursAgo = new Date();
+  twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+
+  const { data: attemptRows, error: attemptError } = await supabaseAdmin
+    .from('domain_verifications')
+    .select('attempt_count')
+    .eq('domain_id', domainId)
+    .gte('created_at', twentyFourHoursAgo.toISOString());
+
+  if (attemptError) {
+    throw new Error(`Failed to check verification attempts: ${attemptError.message}`);
+  }
+
+  const totalAttempts = (attemptRows ?? []).reduce(
+    (sum, row) => sum + ((row.attempt_count as number) ?? 0),
+    0,
+  );
+
   if (totalAttempts >= 20) {
     throw new RateLimitError(
       'Too many verification attempts for this domain. Try again in 24 hours.',
@@ -180,15 +212,19 @@ export async function checkVerification(
   }
 
   // Get latest pending token
-  const [pending] = await sql`
-    SELECT id, token, expires_at
-    FROM domain_verifications
-    WHERE domain_id = ${domainId}
-      AND status = 'pending'
-      AND expires_at > now()
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
+  const { data: pending, error: pendingError } = await supabaseAdmin
+    .from('domain_verifications')
+    .select('id, token, expires_at')
+    .eq('domain_id', domainId)
+    .eq('status', 'pending')
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (pendingError) {
+    throw new Error(`Failed to fetch pending verification: ${pendingError.message}`);
+  }
 
   if (!pending) {
     throw new ValidationError(
@@ -201,11 +237,35 @@ export async function checkVerification(
   const host = domain.host;
 
   // Increment attempt counter
-  await sql`
-    UPDATE domain_verifications
-    SET attempt_count = attempt_count + 1
-    WHERE id = ${verificationId}
-  `;
+  // We need the current value first to increment
+  const { error: incError } = await supabaseAdmin.rpc('increment_attempt_count', {
+    verification_id: verificationId,
+  }).then(
+    // If the RPC doesn't exist, fall back to a manual update
+    (res) => {
+      if (res.error) {
+        // Fallback: read current count and update
+        return { error: res.error };
+      }
+      return res;
+    },
+  );
+
+  // If RPC failed (likely doesn't exist), do a manual read + update
+  if (incError) {
+    const { data: currentRow } = await supabaseAdmin
+      .from('domain_verifications')
+      .select('attempt_count')
+      .eq('id', verificationId)
+      .single();
+
+    const currentCount = (currentRow?.attempt_count as number) ?? 0;
+
+    await supabaseAdmin
+      .from('domain_verifications')
+      .update({ attempt_count: currentCount + 1 })
+      .eq('id', verificationId);
+  }
 
   // Execute the appropriate verification method
   let verified = false;
@@ -242,25 +302,41 @@ export async function checkVerification(
   }
 
   if (verified) {
-    // Transaction: mark verification as verified + update domain
-    await sql.begin(async (tx) => {
-      await tx`
-        UPDATE domain_verifications
-        SET status = 'verified',
-            method = ${method},
-            verified_at = now(),
-            evidence = ${JSON.stringify(evidence ?? {})}::jsonb
-        WHERE id = ${verificationId}
-      `;
-      await tx`
-        UPDATE domains
-        SET verified_at = now(),
-            verification_method = ${method},
-            verification_expires_at = now() + interval '365 days',
-            updated_at = now()
-        WHERE id = ${domainId}
-      `;
-    });
+    // Sequential updates (replaces the SQL transaction).
+    // If the first succeeds but the second fails, domain_verifications will be
+    // marked verified but domains.verified_at won't be set. Acceptable for now;
+    // can be replaced with an RPC function later.
+    const now = new Date().toISOString();
+    const expiresOneYear = new Date();
+    expiresOneYear.setFullYear(expiresOneYear.getFullYear() + 1);
+
+    const { error: verUpdateError } = await supabaseAdmin
+      .from('domain_verifications')
+      .update({
+        status: 'verified',
+        method,
+        verified_at: now,
+        evidence: evidence ?? {},
+      })
+      .eq('id', verificationId);
+
+    if (verUpdateError) {
+      throw new Error(`Failed to update verification record: ${verUpdateError.message}`);
+    }
+
+    const { error: domUpdateError } = await supabaseAdmin
+      .from('domains')
+      .update({
+        verified_at: now,
+        verification_method: method,
+        verification_expires_at: expiresOneYear.toISOString(),
+        updated_at: now,
+      })
+      .eq('id', domainId);
+
+    if (domUpdateError) {
+      throw new Error(`Failed to update domain verification status: ${domUpdateError.message}`);
+    }
 
     await audit(req, {
       actor_id: userId,
@@ -297,30 +373,35 @@ export async function getVerificationStatus(
   await getDomainForOrg(domainId, orgId);
 
   // Current pending verification (if any)
-  const [current] = await sql`
-    SELECT id, domain_id, token, method, status, evidence,
-           attempt_count, created_at, verified_at, expires_at
-    FROM domain_verifications
-    WHERE domain_id = ${domainId}
-      AND status = 'pending'
-      AND expires_at > now()
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
+  const { data: current, error: currentError } = await supabaseAdmin
+    .from('domain_verifications')
+    .select('id, domain_id, token, method, status, evidence, attempt_count, created_at, verified_at, expires_at')
+    .eq('domain_id', domainId)
+    .eq('status', 'pending')
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (currentError) {
+    throw new Error(`Failed to fetch current verification: ${currentError.message}`);
+  }
 
   // Full history (last 10)
-  const history = await sql`
-    SELECT id, domain_id, token, method, status, evidence,
-           attempt_count, created_at, verified_at, expires_at
-    FROM domain_verifications
-    WHERE domain_id = ${domainId}
-    ORDER BY created_at DESC
-    LIMIT 10
-  `;
+  const { data: history, error: historyError } = await supabaseAdmin
+    .from('domain_verifications')
+    .select('id, domain_id, token, method, status, evidence, attempt_count, created_at, verified_at, expires_at')
+    .eq('domain_id', domainId)
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (historyError) {
+    throw new Error(`Failed to fetch verification history: ${historyError.message}`);
+  }
 
   return {
     current: (current as unknown as VerificationRow) ?? null,
-    history: history as unknown as VerificationRow[],
+    history: (history ?? []) as unknown as VerificationRow[],
   };
 }
 

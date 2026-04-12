@@ -1,4 +1,4 @@
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { NotFoundError } from '../lib/errors.js';
 
 // ---------------------------------------------------------------------------
@@ -25,23 +25,31 @@ export async function getReportByScanId(
   scanId: string,
 ): Promise<ReportRow | null> {
   // Verify the scan belongs to the organization
-  const [scan] = await sql`
-    SELECT id FROM scan_jobs
-    WHERE id = ${scanId}
-      AND organization_id = ${orgId}
-  `;
+  const { data: scan, error: scanError } = await supabaseAdmin
+    .from('scan_jobs')
+    .select('id')
+    .eq('id', scanId)
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
+  if (scanError) {
+    throw new Error(`Failed to verify scan ownership: ${scanError.message}`);
+  }
 
   if (!scan) {
     throw new NotFoundError('Scan nem talalhato vagy nem tartozik a szervezethez');
   }
 
   // Fetch the report for this scan
-  const [report] = await sql`
-    SELECT id, scan_job_id, domain_id, summary_hu, pdf_url,
-           finding_count, severity_counts, generated_at
-    FROM reports
-    WHERE scan_job_id = ${scanId}
-  `;
+  const { data: report, error: reportError } = await supabaseAdmin
+    .from('reports')
+    .select('id, scan_job_id, domain_id, summary_hu, pdf_url, finding_count, severity_counts, generated_at')
+    .eq('scan_job_id', scanId)
+    .maybeSingle();
+
+  if (reportError) {
+    throw new Error(`Failed to fetch report: ${reportError.message}`);
+  }
 
   if (!report) {
     return null;

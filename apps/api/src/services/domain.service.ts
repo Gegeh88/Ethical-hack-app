@@ -1,4 +1,4 @@
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 import { NotFoundError, RateLimitError } from '../lib/errors.js';
 import { checkDomainQuota } from './quota.service.js';
 
@@ -28,24 +28,31 @@ export async function listDomains(
 ): Promise<ListDomainsResult> {
   const offset = (page - 1) * limit;
 
-  const [countResult] = await sql`
-    SELECT count(*)::int AS total
-    FROM domains
-    WHERE organization_id = ${orgId}
-  `;
+  // Count total
+  const { count, error: countError } = await supabaseAdmin
+    .from('domains')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', orgId);
 
-  const rows = await sql`
-    SELECT id, organization_id, added_by, host, verified_at, verification_method,
-           verification_expires_at, is_shared_hosting, notes, created_at, updated_at
-    FROM domains
-    WHERE organization_id = ${orgId}
-    ORDER BY created_at DESC
-    LIMIT ${limit} OFFSET ${offset}
-  `;
+  if (countError) {
+    throw new Error(`Failed to count domains: ${countError.message}`);
+  }
+
+  // Paginated rows
+  const { data: rows, error: rowsError } = await supabaseAdmin
+    .from('domains')
+    .select('id, organization_id, added_by, host, verified_at, verification_method, verification_expires_at, is_shared_hosting, notes, created_at, updated_at')
+    .eq('organization_id', orgId)
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (rowsError) {
+    throw new Error(`Failed to list domains: ${rowsError.message}`);
+  }
 
   return {
-    data: rows as unknown as DomainRow[],
-    total: (countResult?.total as number) ?? 0,
+    data: (rows ?? []) as unknown as DomainRow[],
+    total: count ?? 0,
   };
 }
 
@@ -61,15 +68,19 @@ export async function createDomain(
     throw new RateLimitError(quota.reason!);
   }
 
-  const [domain] = await sql`
-    INSERT INTO domains (organization_id, added_by, host, is_shared_hosting)
-    VALUES (${orgId}, ${userId}, ${host}, ${isSharedHosting})
-    RETURNING id, organization_id, added_by, host, verified_at, verification_method,
-              verification_expires_at, is_shared_hosting, notes, created_at, updated_at
-  `;
+  const { data: domain, error } = await supabaseAdmin
+    .from('domains')
+    .insert({
+      organization_id: orgId,
+      added_by: userId,
+      host,
+      is_shared_hosting: isSharedHosting,
+    })
+    .select('id, organization_id, added_by, host, verified_at, verification_method, verification_expires_at, is_shared_hosting, notes, created_at, updated_at')
+    .single();
 
-  if (!domain) {
-    throw new Error('Failed to create domain');
+  if (error || !domain) {
+    throw new Error(`Failed to create domain: ${error?.message ?? 'no data returned'}`);
   }
 
   return domain as unknown as DomainRow;
@@ -79,28 +90,35 @@ export async function getDomainById(
   orgId: string,
   domainId: string,
 ): Promise<DomainRow & { verifications: unknown[] }> {
-  const [domain] = await sql`
-    SELECT id, organization_id, added_by, host, verified_at, verification_method,
-           verification_expires_at, is_shared_hosting, notes, created_at, updated_at
-    FROM domains
-    WHERE id = ${domainId} AND organization_id = ${orgId}
-  `;
+  const { data: domain, error } = await supabaseAdmin
+    .from('domains')
+    .select('id, organization_id, added_by, host, verified_at, verification_method, verification_expires_at, is_shared_hosting, notes, created_at, updated_at')
+    .eq('id', domainId)
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to fetch domain: ${error.message}`);
+  }
 
   if (!domain) {
     throw new NotFoundError('Domain not found');
   }
 
   // Fetch associated verification records
-  const verifications = await sql`
-    SELECT id, domain_id, method, token, status, checked_at, expires_at, created_at
-    FROM domain_verifications
-    WHERE domain_id = ${domainId}
-    ORDER BY created_at DESC
-  `;
+  const { data: verifications, error: verError } = await supabaseAdmin
+    .from('domain_verifications')
+    .select('id, domain_id, method, token, status, checked_at, expires_at, created_at')
+    .eq('domain_id', domainId)
+    .order('created_at', { ascending: false });
+
+  if (verError) {
+    throw new Error(`Failed to fetch verifications: ${verError.message}`);
+  }
 
   return {
     ...(domain as unknown as DomainRow),
-    verifications: verifications as unknown[],
+    verifications: (verifications ?? []) as unknown[],
   };
 }
 
@@ -108,12 +126,18 @@ export async function deleteDomain(
   orgId: string,
   domainId: string,
 ): Promise<void> {
-  const result = await sql`
-    DELETE FROM domains
-    WHERE id = ${domainId} AND organization_id = ${orgId}
-  `;
+  const { data, error } = await supabaseAdmin
+    .from('domains')
+    .delete()
+    .eq('id', domainId)
+    .eq('organization_id', orgId)
+    .select('id');
 
-  if (result.count === 0) {
+  if (error) {
+    throw new Error(`Failed to delete domain: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
     throw new NotFoundError('Domain not found');
   }
 }

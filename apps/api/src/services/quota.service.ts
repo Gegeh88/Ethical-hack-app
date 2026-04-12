@@ -1,4 +1,4 @@
-import { sql } from '../lib/db.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,9 +23,12 @@ const DOMAIN_LIMITS: Record<string, number> = { free: 5, pro: 25, business: 100 
 // ---------------------------------------------------------------------------
 
 async function getOrgTier(orgId: string): Promise<string> {
-  const [sub] = await sql`
-    SELECT tier FROM subscriptions WHERE organization_id = ${orgId}
-  `;
+  const { data: sub } = await supabaseAdmin
+    .from('subscriptions')
+    .select('tier')
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
   return (sub?.tier as string) ?? 'free';
 }
 
@@ -37,14 +40,22 @@ export async function checkScanQuota(orgId: string): Promise<QuotaCheck> {
   const tier = await getOrgTier(orgId);
   const limit = SCAN_LIMITS[tier] ?? 3;
 
-  const [count] = await sql`
-    SELECT count(*)::int AS total
-    FROM scan_jobs
-    WHERE organization_id = ${orgId}
-      AND queued_at >= date_trunc('month', now())
-  `;
+  // Count scans queued this month
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
 
-  const current = (count?.total as number) ?? 0;
+  const { count, error } = await supabaseAdmin
+    .from('scan_jobs')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .gte('queued_at', startOfMonth.toISOString());
+
+  if (error) {
+    throw new Error(`Scan quota check failed: ${error.message}`);
+  }
+
+  const current = count ?? 0;
 
   if (current >= limit) {
     return {
@@ -66,13 +77,16 @@ export async function checkDomainQuota(orgId: string): Promise<QuotaCheck> {
   const tier = await getOrgTier(orgId);
   const limit = DOMAIN_LIMITS[tier] ?? 5;
 
-  const [count] = await sql`
-    SELECT count(*)::int AS total
-    FROM domains
-    WHERE organization_id = ${orgId}
-  `;
+  const { count, error } = await supabaseAdmin
+    .from('domains')
+    .select('*', { count: 'exact', head: true })
+    .eq('organization_id', orgId);
 
-  const current = (count?.total as number) ?? 0;
+  if (error) {
+    throw new Error(`Domain quota check failed: ${error.message}`);
+  }
+
+  const current = count ?? 0;
 
   if (current >= limit) {
     return {

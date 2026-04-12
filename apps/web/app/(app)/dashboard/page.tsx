@@ -46,7 +46,8 @@ export default async function DashboardPage() {
   let apiError: string | null = null;
 
   try {
-    me = await apiClient<MeResponse>('/auth/me', { token: session.access_token });
+    const res = await apiClient<{ data: MeResponse }>('/auth/me', { token: session.access_token });
+    me = res.data;
   } catch (err) {
     apiError = err instanceof Error ? err.message : 'API hiba';
   }

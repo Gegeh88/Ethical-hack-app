@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { RegisterOrgRequest } from '@haxvibe/shared-types';
-import { sql } from '../lib/db.js';
 import { audit } from '../lib/audit.js';
 import { ForbiddenError } from '../lib/errors.js';
 import { createOrganization } from '../services/org.service.js';
+import { supabaseAdmin } from '../lib/supabase.js';
 
 export default async function authRoutes(fastify: FastifyInstance): Promise<void> {
   // POST /register-org — create organization for the authenticated user
@@ -41,32 +41,32 @@ export default async function authRoutes(fastify: FastifyInstance): Promise<void
     '/me',
     { preHandler: [fastify.authenticate] },
     async (req: FastifyRequest, _reply: FastifyReply) => {
-      // Fetch the full user row
-      const [user] = await sql`
-        SELECT id, organization_id, display_name, role, locale, totp_enabled, created_at, updated_at
-        FROM app_users
-        WHERE id = ${req.userId}
-      `;
+      // Fetch via Supabase REST API (avoids direct Postgres connection issues)
+      const { data: user } = await supabaseAdmin
+        .from('app_users')
+        .select('id, organization_id, display_name, role, locale, totp_enabled, created_at, updated_at')
+        .eq('id', req.userId)
+        .single();
 
       let org = null;
       let subscription = null;
 
       if (user?.organization_id) {
-        const [orgRow] = await sql`
-          SELECT id, name, billing_email, created_at, updated_at
-          FROM organizations
-          WHERE id = ${user.organization_id}
-        `;
+        const { data: orgRow } = await supabaseAdmin
+          .from('organizations')
+          .select('id, name, billing_email, created_at, updated_at')
+          .eq('id', user.organization_id)
+          .single();
         org = orgRow ?? null;
 
         if (org) {
-          const [subRow] = await sql`
-            SELECT id, organization_id, tier, status, created_at, updated_at
-            FROM subscriptions
-            WHERE organization_id = ${org.id}
-            ORDER BY created_at DESC
-            LIMIT 1
-          `;
+          const { data: subRow } = await supabaseAdmin
+            .from('subscriptions')
+            .select('id, organization_id, tier, status, created_at, updated_at')
+            .eq('organization_id', org.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
           subscription = subRow ?? null;
         }
       }

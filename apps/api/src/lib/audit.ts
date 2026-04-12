@@ -1,5 +1,5 @@
 import type { FastifyRequest } from 'fastify';
-import { sql } from './db.js';
+import { supabaseAdmin } from './supabase.js';
 
 interface AuditEntry {
   actor_id: string;
@@ -11,17 +11,19 @@ interface AuditEntry {
 }
 
 export async function audit(req: FastifyRequest, entry: AuditEntry): Promise<void> {
-  await sql`
-    INSERT INTO audit_log (actor_id, actor_type, action, resource_type, resource_id, ip_address, user_agent, metadata)
-    VALUES (
-      ${entry.actor_id},
-      ${entry.actor_type ?? 'user'},
-      ${entry.action},
-      ${entry.resource_type ?? null},
-      ${entry.resource_id ?? null},
-      ${req.ip}::inet,
-      ${req.headers['user-agent'] ?? null},
-      ${entry.metadata ? JSON.stringify(entry.metadata) : null}
-    )
-  `;
+  const { error } = await supabaseAdmin.from('audit_log').insert({
+    actor_id: entry.actor_id,
+    actor_type: entry.actor_type ?? 'user',
+    action: entry.action,
+    resource_type: entry.resource_type ?? null,
+    resource_id: entry.resource_id ?? null,
+    ip_address: req.ip,
+    user_agent: req.headers['user-agent'] ?? null,
+    metadata: entry.metadata ?? null,
+  });
+
+  if (error) {
+    // Log but don't throw — audit failures should not break the main flow
+    req.log.error({ err: error }, 'Failed to write audit log entry');
+  }
 }

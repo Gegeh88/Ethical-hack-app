@@ -11,6 +11,7 @@ const configSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
 
   DATABASE_URL: z.string().url(),
+  DATABASE_URL_POOLED: z.string().url().optional(),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
 
   CURRENT_TOS_VERSION: z.string().default('2026-04-01'),

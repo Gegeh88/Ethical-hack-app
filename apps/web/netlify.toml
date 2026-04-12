@@ -1,5 +1,6 @@
 [build]
-  command = "cd ../.. && npx pnpm build --filter @haxvibe/web"
+  base = "apps/web"
+  command = "cd ../.. && npm i -g pnpm && pnpm install && pnpm build --filter @haxvibe/web"
   publish = ".next"
 
 [build.environment]

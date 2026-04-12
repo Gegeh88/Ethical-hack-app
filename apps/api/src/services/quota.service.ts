@@ -15,7 +15,7 @@ export interface QuotaCheck {
 // Tier limits
 // ---------------------------------------------------------------------------
 
-const SCAN_LIMITS: Record<string, number> = { free: 3, pro: 50, business: 999 };
+const SCAN_LIMITS: Record<string, number> = { free: 999, pro: 50, business: 999 };
 const DOMAIN_LIMITS: Record<string, number> = { free: 5, pro: 25, business: 100 };
 
 // ---------------------------------------------------------------------------
@@ -104,11 +104,7 @@ export async function checkDomainQuota(orgId: string): Promise<QuotaCheck> {
 // checkScanTypeAllowed
 // ---------------------------------------------------------------------------
 
-export async function checkScanTypeAllowed(orgId: string, scanType: string): Promise<boolean> {
-  if (scanType === 'passive') return true;
-
-  const tier = await getOrgTier(orgId);
-
-  // Active/full scans require pro or business
-  return tier !== 'free';
+export async function checkScanTypeAllowed(_orgId: string, _scanType: string): Promise<boolean> {
+  // All scan types allowed for now (MVP testing)
+  return true;
 }

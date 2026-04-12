@@ -349,6 +349,19 @@ export default function ScanDetailPage() {
               )}
             </div>
 
+            {/* Link to vulnerabilities list */}
+            {totalFindings > 0 && (
+              <div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  render={<Link href={`/scans/${scanId}/vulnerabilities`} />}
+                >
+                  Találatok megtekintése
+                </Button>
+              </div>
+            )}
+
             {/* Executive summary */}
             {report.summary_hu && (
               <div className="rounded-lg border border-border bg-muted/30 p-4">

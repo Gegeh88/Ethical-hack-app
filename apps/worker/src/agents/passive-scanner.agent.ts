@@ -2,6 +2,9 @@ import type { Logger } from 'pino';
 import { checkSsl } from './passive-scanner/ssl.check.js';
 import { checkHeaders } from './passive-scanner/headers.check.js';
 import { checkDns } from './passive-scanner/dns.check.js';
+import { checkRobots } from './passive-scanner/robots.check.js';
+import { checkPorts } from './passive-scanner/ports.check.js';
+import { detectCms } from './passive-scanner/cms-detect.check.js';
 import { emitProgress } from '../lib/emit-progress.js';
 import { sql } from '../lib/db.js';
 import type { FindingInput } from './passive-scanner/types.js';
@@ -28,7 +31,9 @@ export async function runPassiveScan(
     { name: 'ssl', fn: () => checkSsl(host) },
     { name: 'headers', fn: () => checkHeaders(host) },
     { name: 'dns', fn: () => checkDns(host) },
-    // TODO(phase2): add robots, whois, ports, cms, safebrowsing checks
+    { name: 'robots', fn: () => checkRobots(host) },
+    { name: 'ports', fn: () => checkPorts(host) },
+    { name: 'cms', fn: () => detectCms(host) },
   ];
 
   const total = checks.length;

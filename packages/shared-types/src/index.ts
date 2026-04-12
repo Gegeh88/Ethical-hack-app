@@ -144,6 +144,51 @@ export const MeResponse = z.object({
 export type MeResponse = z.infer<typeof MeResponse>;
 
 // ============================================================
+// Domain verification schemas
+// ============================================================
+
+export const VerificationStatus = z.enum(['pending', 'verified', 'failed', 'expired']);
+export type VerificationStatus = z.infer<typeof VerificationStatus>;
+
+export const DomainVerification = z.object({
+  id: z.string().uuid(),
+  domain_id: z.string().uuid(),
+  token: z.string(),
+  method: VerificationMethod.nullable(),
+  status: VerificationStatus,
+  evidence: z.record(z.unknown()).nullable(),
+  attempt_count: z.number().int(),
+  created_at: z.string().datetime(),
+  verified_at: z.string().datetime().nullable(),
+  expires_at: z.string().datetime(),
+});
+export type DomainVerification = z.infer<typeof DomainVerification>;
+
+export const VerificationCheckRequest = z.object({
+  method: VerificationMethod,
+});
+export type VerificationCheckRequest = z.infer<typeof VerificationCheckRequest>;
+
+export const VerificationResult = z.object({
+  verified: z.boolean(),
+  method: VerificationMethod,
+  reason: z.string().optional(),
+  evidence: z.record(z.unknown()).optional(),
+});
+export type VerificationResult = z.infer<typeof VerificationResult>;
+
+export const VerificationTokenResponse = z.object({
+  token: z.string(),
+  expiresAt: z.string().datetime(),
+  instructions: z.object({
+    dns: z.string(),
+    meta: z.string(),
+    file: z.string(),
+  }),
+});
+export type VerificationTokenResponse = z.infer<typeof VerificationTokenResponse>;
+
+// ============================================================
 // Helpers
 // ============================================================
 export function severityRank(s: Severity): number {

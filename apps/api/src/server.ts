@@ -7,6 +7,7 @@ import errorHandlerPlugin from './plugins/error-handler.js';
 import authPlugin from './middleware/auth.js';
 import authRoutes from './routes/auth.routes.js';
 import domainRoutes from './routes/domains.routes.js';
+import verificationRoutes from './routes/verification.routes.js';
 import { sql } from './lib/db.js';
 
 async function buildServer() {
@@ -32,6 +33,7 @@ async function buildServer() {
   await app.register(authPlugin);
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(domainRoutes, { prefix: '/api/v1/domains' });
+  await app.register(verificationRoutes, { prefix: '/api/v1/domains' });
 
   app.get('/api/v1/health', async () => {
     return {

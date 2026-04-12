@@ -102,6 +102,9 @@ export default async function DomainsPage() {
                     <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
                       Hozzáadva
                     </th>
+                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                      Műveletek
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -110,7 +113,14 @@ export default async function DomainsPage() {
                       key={domain.id}
                       className="border-b border-border last:border-0 hover:bg-muted/50"
                     >
-                      <td className="px-4 py-3 font-mono font-medium">{domain.host}</td>
+                      <td className="px-4 py-3 font-mono font-medium">
+                        <Link
+                          href={`/domains/${domain.id}`}
+                          className="hover:underline"
+                        >
+                          {domain.host}
+                        </Link>
+                      </td>
                       <td className="px-4 py-3">
                         {domain.verified_at ? (
                           <Badge variant="default">Igazolt</Badge>
@@ -127,6 +137,27 @@ export default async function DomainsPage() {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatDate(domain.created_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {domain.verified_at ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            render={<Link href={`/domains/${domain.id}`} />}
+                          >
+                            Részletek
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            render={
+                              <Link href={`/domains/${domain.id}/verify`} />
+                            }
+                          >
+                            Igazolás
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   ))}

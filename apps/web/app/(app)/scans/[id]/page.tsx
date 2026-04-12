@@ -91,11 +91,26 @@ const SEVERITY_CONFIG: Record<
   string,
   { label: string; className: string }
 > = {
-  critical: { label: 'Kritikus', className: 'bg-red-100 text-red-800 border-red-200' },
-  high: { label: 'Magas', className: 'bg-orange-100 text-orange-800 border-orange-200' },
-  medium: { label: 'Közepes', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-  low: { label: 'Alacsony', className: 'bg-blue-100 text-blue-800 border-blue-200' },
-  info: { label: 'Info', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+  critical: {
+    label: 'Kritikus',
+    className: 'border-severity-critical/30 bg-severity-critical/10 text-severity-critical',
+  },
+  high: {
+    label: 'Magas',
+    className: 'border-severity-high/30 bg-severity-high/10 text-severity-high',
+  },
+  medium: {
+    label: 'Közepes',
+    className: 'border-severity-medium/30 bg-severity-medium/10 text-severity-medium',
+  },
+  low: {
+    label: 'Alacsony',
+    className: 'border-severity-low/30 bg-severity-low/10 text-severity-low',
+  },
+  info: {
+    label: 'Info',
+    className: 'border-severity-info/30 bg-severity-info/10 text-severity-info',
+  },
 };
 
 export default function ScanDetailPage() {
@@ -171,10 +186,10 @@ export default function ScanDetailPage() {
   if (loadingInitial) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="h-5 w-32 animate-pulse rounded bg-muted" />
-        <div className="h-8 w-64 animate-pulse rounded bg-muted" />
-        <div className="h-40 animate-pulse rounded-lg bg-muted" />
-        <div className="h-32 animate-pulse rounded-lg bg-muted" />
+        <div className="h-5 w-32 animate-pulse bg-surface-high" />
+        <div className="h-8 w-64 animate-pulse bg-surface-high" />
+        <div className="h-40 animate-pulse bg-surface-low" />
+        <div className="h-32 animate-pulse bg-surface-low" />
       </div>
     );
   }
@@ -184,12 +199,12 @@ export default function ScanDetailPage() {
       <div className="flex flex-col gap-6">
         <Link
           href="/scans"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
         >
           <ArrowLeft className="size-4" />
           Vissza a vizsgálatokhoz
         </Link>
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {initError}
         </div>
       </div>
@@ -207,7 +222,7 @@ export default function ScanDetailPage() {
       {/* Back link */}
       <Link
         href="/scans"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
       >
         <ArrowLeft className="size-4" />
         Vissza a vizsgálatokhoz
@@ -216,14 +231,14 @@ export default function ScanDetailPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1.5">
-          <h1 className="font-mono text-2xl font-bold tracking-tight">
+          <h1 className="font-mono text-2xl font-bold text-onSurface">
             {scan.domain?.host ?? scan.domain_id}
           </h1>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-sm text-onSurface-variant">
               {typeLabel(scan.type)}
             </span>
-            <span className="text-muted-foreground">·</span>
+            <span className="text-onSurface-variant">·</span>
             <StatusIndicator status={displayStatus} />
           </div>
         </div>
@@ -246,7 +261,7 @@ export default function ScanDetailPage() {
           {/* Progress bar */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
+              <span className="font-mono text-xs text-onSurface-variant">
                 {displayStatus === 'completed'
                   ? 'Befejezve'
                   : displayStatus === 'failed'
@@ -255,17 +270,19 @@ export default function ScanDetailPage() {
                       ? 'Megszakítva'
                       : stepLabel(displayStep ?? null)}
               </span>
-              <span className="font-medium tabular-nums">{displayProgress}%</span>
+              <span className="font-mono text-xs font-medium text-onSurface tabular-nums">
+                {displayProgress}%
+              </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-1 w-full overflow-hidden bg-surface-high">
               <div
                 className={cn(
-                  'h-full rounded-full transition-all duration-500',
-                  displayStatus === 'running' && 'bg-blue-500',
-                  displayStatus === 'completed' && 'bg-emerald-500',
-                  displayStatus === 'failed' && 'bg-destructive',
-                  displayStatus === 'cancelled' && 'bg-muted-foreground',
-                  displayStatus === 'queued' && 'bg-muted-foreground/40',
+                  'h-full transition-all duration-500',
+                  displayStatus === 'running' && 'bg-pulse',
+                  displayStatus === 'completed' && 'bg-pulse',
+                  displayStatus === 'failed' && 'bg-severity-critical',
+                  displayStatus === 'cancelled' && 'bg-onSurface-variant',
+                  displayStatus === 'queued' && 'bg-onSurface-variant/30',
                 )}
                 style={{ width: `${displayProgress}%` }}
               />
@@ -274,7 +291,7 @@ export default function ScanDetailPage() {
 
           {/* Running indicator */}
           {displayStatus === 'running' && (
-            <div className="flex items-center gap-2 text-sm text-blue-600">
+            <div className="flex items-center gap-2 text-sm text-pulse">
               <Loader2 className="size-4 animate-spin" />
               A vizsgálat folyamatban van...
             </div>
@@ -282,7 +299,7 @@ export default function ScanDetailPage() {
 
           {/* Completed */}
           {displayStatus === 'completed' && (
-            <div className="flex items-center gap-2 text-sm text-emerald-600">
+            <div className="flex items-center gap-2 text-sm text-pulse">
               <CheckCircle className="size-4" />
               A vizsgálat sikeresen befejezodott.
             </div>
@@ -290,7 +307,7 @@ export default function ScanDetailPage() {
 
           {/* Failed */}
           {displayStatus === 'failed' && displayError && (
-            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="flex items-start gap-2 border-l-2 border-error bg-error-container/20 p-3 text-sm text-error">
               <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <div>
                 <p className="font-medium">Hiba történt a vizsgálat során:</p>
@@ -301,7 +318,7 @@ export default function ScanDetailPage() {
 
           {/* Queued */}
           {displayStatus === 'queued' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-onSurface-variant">
               <Clock className="size-4" />
               Várakozás a worker szabad kapacitására...
             </div>
@@ -332,7 +349,7 @@ export default function ScanDetailPage() {
                     <span
                       key={sev}
                       className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium',
+                        'inline-flex items-center gap-1.5 border px-3 py-1 text-sm font-medium',
                         className,
                       )}
                     >
@@ -343,7 +360,7 @@ export default function ScanDetailPage() {
                 },
               )}
               {totalFindings === 0 && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-onSurface-variant">
                   Nem találtunk sérülékenységet.
                 </span>
               )}
@@ -364,11 +381,11 @@ export default function ScanDetailPage() {
 
             {/* Executive summary */}
             {report.summary_hu && (
-              <div className="rounded-lg border border-border bg-muted/30 p-4">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="border-l-2 border-outline-variant/40 bg-surface-mid p-4">
+                <p className="mb-2 font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                   AI összefoglaló
                 </p>
-                <p className="text-sm leading-relaxed">{report.summary_hu}</p>
+                <p className="text-sm leading-relaxed text-onSurface">{report.summary_hu}</p>
               </div>
             )}
 
@@ -401,26 +418,26 @@ export default function ScanDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-2 text-sm">
-            <span className="text-muted-foreground">Azonosító</span>
-            <span className="font-mono text-xs">{scan.id}</span>
-            <span className="text-muted-foreground">Domain</span>
-            <span className="font-mono">{scan.domain?.host ?? scan.domain_id}</span>
-            <span className="text-muted-foreground">Típus</span>
-            <span>{typeLabel(scan.type)}</span>
-            <span className="text-muted-foreground">Állapot</span>
+            <span className="text-onSurface-variant">Azonosító</span>
+            <span className="font-mono text-xs text-onSurface">{scan.id}</span>
+            <span className="text-onSurface-variant">Domain</span>
+            <span className="font-mono text-onSurface">{scan.domain?.host ?? scan.domain_id}</span>
+            <span className="text-onSurface-variant">Típus</span>
+            <span className="text-onSurface">{typeLabel(scan.type)}</span>
+            <span className="text-onSurface-variant">Állapot</span>
             <StatusIndicator status={displayStatus} />
-            <span className="text-muted-foreground">Sorba állítva</span>
-            <span>{formatDate(scan.queued_at)}</span>
+            <span className="text-onSurface-variant">Sorba állítva</span>
+            <span className="font-mono text-onSurface">{formatDate(scan.queued_at)}</span>
             {scan.started_at && (
               <>
-                <span className="text-muted-foreground">Elindítva</span>
-                <span>{formatDate(scan.started_at)}</span>
+                <span className="text-onSurface-variant">Elindítva</span>
+                <span className="font-mono text-onSurface">{formatDate(scan.started_at)}</span>
               </>
             )}
             {scan.completed_at && (
               <>
-                <span className="text-muted-foreground">Befejezve</span>
-                <span>{formatDate(scan.completed_at)}</span>
+                <span className="text-onSurface-variant">Befejezve</span>
+                <span className="font-mono text-onSurface">{formatDate(scan.completed_at)}</span>
               </>
             )}
           </div>
@@ -438,20 +455,20 @@ function StatusIndicator({
   switch (status) {
     case 'running':
       return (
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-          <span className="size-1.5 animate-pulse rounded-full bg-blue-500" />
+        <span className="inline-flex items-center gap-1.5 border border-pulse/20 bg-pulse/10 px-2.5 py-0.5 text-xs font-medium text-pulse">
+          <span className="size-1.5 animate-pulse bg-pulse" />
           Fut
         </span>
       );
     case 'completed':
       return (
-        <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+        <span className="inline-flex items-center border border-pulse/20 bg-pulse/10 px-2.5 py-0.5 text-xs font-medium text-pulse">
           Kész
         </span>
       );
     case 'failed':
       return (
-        <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+        <span className="inline-flex items-center border border-severity-critical/30 bg-severity-critical/10 px-2.5 py-0.5 text-xs font-medium text-severity-critical">
           Sikertelen
         </span>
       );

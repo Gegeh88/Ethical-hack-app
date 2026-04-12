@@ -6,6 +6,7 @@ import { assertValidHost } from '../lib/host-validator.js';
 import { canScanDomain } from '../lib/can-scan-domain.js';
 import { runPassiveScan } from '../agents/passive-scanner.agent.js';
 import { runNucleiScan } from '../agents/nuclei-scanner.agent.js';
+import { generateReport } from '../agents/report-generator.agent.js';
 import type { FindingInput } from '../agents/passive-scanner.agent.js';
 
 /**
@@ -99,7 +100,31 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     }
 
     // -------------------------------------------------------
-    // 5. Mark completed
+    // 5. Generate report with AI enrichment (non-fatal)
+    // -------------------------------------------------------
+    jobLogger.info('Starting report generation');
+    await emitProgress(scanJobId, 'progress', { step: 'report', pct: 80 });
+    try {
+      const [scanRow] = await sql`SELECT organization_id FROM scan_jobs WHERE id = ${scanJobId}`;
+      if (scanRow) {
+        await generateReport(
+          scanJobId,
+          domainId,
+          scanRow.organization_id as string,
+          host,
+          jobLogger,
+        );
+      } else {
+        jobLogger.warn('Could not find scan job row for report generation');
+      }
+    } catch (err) {
+      jobLogger.error({ err }, 'Report generation failed (non-fatal, scan still succeeds)');
+      // Report generation failure must not fail the entire scan.
+      // Partial results and findings are already persisted.
+    }
+
+    // -------------------------------------------------------
+    // 6. Mark completed
     // -------------------------------------------------------
     await sql`
       UPDATE scan_jobs

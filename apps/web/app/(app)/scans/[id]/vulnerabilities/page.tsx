@@ -41,7 +41,7 @@ interface VulnerabilitiesResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Severity config
+// Severity config — Sovereign Terminal palette
 // ---------------------------------------------------------------------------
 
 const SEVERITY_CONFIG: Record<
@@ -50,40 +50,43 @@ const SEVERITY_CONFIG: Record<
 > = {
   critical: {
     label: 'Kritikus',
-    badgeClass: 'border-red-200 bg-red-100 text-red-800',
+    badgeClass: 'border-severity-critical/30 bg-severity-critical/10 text-severity-critical',
     filterClass:
-      'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
-    activeClass: 'border-red-400 bg-red-500 text-white hover:bg-red-600',
+      'border-severity-critical/20 bg-severity-critical/5 text-severity-critical/80 hover:bg-severity-critical/10',
+    activeClass:
+      'border-severity-critical/50 bg-severity-critical/20 text-severity-critical',
   },
   high: {
     label: 'Magas',
-    badgeClass: 'border-orange-200 bg-orange-100 text-orange-800',
+    badgeClass: 'border-severity-high/30 bg-severity-high/10 text-severity-high',
     filterClass:
-      'border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100',
+      'border-severity-high/20 bg-severity-high/5 text-severity-high/80 hover:bg-severity-high/10',
     activeClass:
-      'border-orange-400 bg-orange-500 text-white hover:bg-orange-600',
+      'border-severity-high/50 bg-severity-high/20 text-severity-high',
   },
   medium: {
     label: 'Közepes',
-    badgeClass: 'border-yellow-200 bg-yellow-100 text-yellow-800',
+    badgeClass: 'border-severity-medium/30 bg-severity-medium/10 text-severity-medium',
     filterClass:
-      'border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100',
+      'border-severity-medium/20 bg-severity-medium/5 text-severity-medium/80 hover:bg-severity-medium/10',
     activeClass:
-      'border-yellow-400 bg-yellow-500 text-white hover:bg-yellow-600',
+      'border-severity-medium/50 bg-severity-medium/20 text-severity-medium',
   },
   low: {
     label: 'Alacsony',
-    badgeClass: 'border-blue-200 bg-blue-100 text-blue-800',
+    badgeClass: 'border-severity-low/30 bg-severity-low/10 text-severity-low',
     filterClass:
-      'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100',
-    activeClass: 'border-blue-400 bg-blue-500 text-white hover:bg-blue-600',
+      'border-severity-low/20 bg-severity-low/5 text-severity-low/80 hover:bg-severity-low/10',
+    activeClass:
+      'border-severity-low/50 bg-severity-low/20 text-severity-low',
   },
   info: {
     label: 'Információs',
-    badgeClass: 'border-gray-200 bg-gray-100 text-gray-700',
+    badgeClass: 'border-severity-info/30 bg-severity-info/10 text-severity-info',
     filterClass:
-      'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100',
-    activeClass: 'border-gray-400 bg-gray-500 text-white hover:bg-gray-600',
+      'border-severity-info/20 bg-severity-info/5 text-severity-info/80 hover:bg-severity-info/10',
+    activeClass:
+      'border-severity-info/50 bg-severity-info/20 text-severity-info',
   },
 };
 
@@ -98,7 +101,7 @@ function SeverityBadge({ severity }: { severity: Severity }) {
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+        'inline-flex shrink-0 items-center border px-2.5 py-0.5 text-xs font-semibold',
         cfg.badgeClass,
       )}
     >
@@ -208,7 +211,7 @@ export default function VulnerabilitiesPage() {
       {/* Back link */}
       <Link
         href={`/scans/${scanId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
       >
         <ArrowLeft className="size-4" />
         Vissza a vizsgálathoz
@@ -216,9 +219,11 @@ export default function VulnerabilitiesPage() {
 
       {/* Heading */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold tracking-tight">Találatok</h1>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
+          Találatok
+        </h1>
         {!loading && meta && (
-          <p className="text-sm text-muted-foreground">
+          <p className="font-mono text-sm text-onSurface-variant">
             {activeSeverity
               ? `${meta.total} találat — szűrve: ${SEVERITY_CONFIG[activeSeverity].label}`
               : `${totalFindings} találat összesen`}
@@ -232,10 +237,10 @@ export default function VulnerabilitiesPage() {
         <button
           onClick={() => handleSeverityFilter(null)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+            'inline-flex items-center gap-1.5 border px-3 py-1 text-sm font-medium transition-colors',
             activeSeverity === null
-              ? 'border-foreground bg-foreground text-background'
-              : 'border-border bg-background text-foreground hover:bg-muted',
+              ? 'border-onSurface/30 bg-surface-high text-onSurface'
+              : 'border-outline-variant/30 bg-transparent text-onSurface-variant hover:bg-surface-high hover:text-onSurface',
           )}
         >
           <span className="tabular-nums">{totalFindings}</span>
@@ -252,7 +257,7 @@ export default function VulnerabilitiesPage() {
               key={sev}
               onClick={() => handleSeverityFilter(sev)}
               className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+                'inline-flex items-center gap-1.5 border px-3 py-1 text-sm font-medium transition-colors',
                 isActive ? cfg.activeClass : cfg.filterClass,
               )}
             >
@@ -267,22 +272,22 @@ export default function VulnerabilitiesPage() {
       {loading && (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-lg bg-muted" />
+            <div key={i} className="h-24 animate-pulse bg-surface-low" />
           ))}
         </div>
       )}
 
       {/* Error */}
       {!loading && error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {error}
         </div>
       )}
 
       {/* Empty state */}
       {!loading && !error && vulns.length === 0 && (
-        <div className="rounded-lg border border-dashed py-12 text-center">
-          <p className="text-sm text-muted-foreground">
+        <div className="border border-outline-variant/20 py-12 text-center">
+          <p className="text-sm text-onSurface-variant">
             {activeSeverity
               ? 'Nincs találat a kiválasztott szűrovel.'
               : 'Nem találtunk sérülékenységet ehhez a vizsgálathoz.'}
@@ -301,8 +306,8 @@ export default function VulnerabilitiesPage() {
 
       {/* Pagination */}
       {!loading && meta && meta.pages > 1 && (
-        <div className="flex items-center justify-between border-t pt-4">
-          <p className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between border-t border-outline-variant/20 pt-4">
+          <p className="font-mono text-sm text-onSurface-variant">
             {page}. oldal / {meta.pages} ({meta.total} találat)
           </p>
           <div className="flex items-center gap-2">
@@ -337,28 +342,28 @@ export default function VulnerabilitiesPage() {
 
 function VulnCard({ vuln, scanId }: { vuln: Vulnerability; scanId: string }) {
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className="transition-colors hover:bg-surface-mid">
       <CardContent className="flex flex-col gap-3 p-4">
         <div className="flex flex-wrap items-start gap-3">
           <SeverityBadge severity={vuln.severity} />
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold leading-snug">{vuln.title}</h3>
+            <h3 className="font-semibold leading-snug text-onSurface">{vuln.title}</h3>
             {vuln.description && (
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+              <p className="mt-1 line-clamp-2 text-sm text-onSurface-variant">
                 {vuln.description}
               </p>
             )}
           </div>
           <Link
             href={`/scans/${scanId}/vulnerabilities/${vuln.id}`}
-            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-pulse underline-offset-4 hover:underline"
           >
             Részletek
             <ExternalLink className="size-3.5" />
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-onSurface-variant">
           {vuln.template_id && (
             <span className="font-mono">{vuln.template_id}</span>
           )}
@@ -368,7 +373,7 @@ function VulnCard({ vuln, scanId }: { vuln: Vulnerability; scanId: string }) {
           {vuln.source_agent && (
             <span>
               Forrás:{' '}
-              <span className="font-medium">
+              <span className="font-medium text-onSurface">
                 {vuln.source_agent === 'passive' ? 'Passzív' : 'Nuclei'}
               </span>
             </span>
@@ -384,7 +389,7 @@ function VulnCard({ vuln, scanId }: { vuln: Vulnerability; scanId: string }) {
               </Badge>
             ))}
             {vuln.tags.length > 8 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-onSurface-variant">
                 +{vuln.tags.length - 8} további
               </span>
             )}

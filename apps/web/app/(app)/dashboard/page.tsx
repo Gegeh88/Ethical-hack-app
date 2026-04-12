@@ -68,20 +68,22 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Üdvözöljük!</h1>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
+          Üdvözöljük!
+        </h1>
         {me?.org && (
-          <p className="mt-1 text-sm text-muted-foreground">{me.org.name}</p>
+          <p className="mt-1 font-mono text-sm text-onSurface-variant">{me.org.name}</p>
         )}
       </div>
 
       {apiError && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {apiError}
         </div>
       )}
 
       {!me?.org && !apiError && (
-        <div className="rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+        <div className="border-l-2 border-forge bg-forge-dark/20 px-4 py-3 text-sm text-forge">
           Nincs szervezethez rendelve. Kérjük, lépj kapcsolatba az adminisztrátorral.
         </div>
       )}
@@ -89,7 +91,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               Előfizetés
             </CardTitle>
           </CardHeader>
@@ -99,30 +101,30 @@ export default async function DashboardPage() {
                 {tierLabel}
               </Badge>
             ) : (
-              <span className="text-sm text-muted-foreground">—</span>
+              <span className="font-mono text-sm text-onSurface-variant">—</span>
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               Domainek száma
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{domainCount}</p>
+            <p className="font-display text-3xl font-bold text-pulse">{domainCount}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               Szerep
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm capitalize">{me?.user.role ?? '—'}</p>
+            <p className="font-mono text-sm text-onSurface capitalize">{me?.user.role ?? '—'}</p>
           </CardContent>
         </Card>
       </div>

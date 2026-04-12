@@ -64,8 +64,10 @@ export default function NewDomainPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Új domain hozzáadása</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
+          Új domain hozzáadása
+        </h1>
+        <p className="mt-1 text-sm text-onSurface-variant">
           Add meg a vizsgálandó domain nevét.
         </p>
       </div>
@@ -76,8 +78,8 @@ export default function NewDomainPage() {
             <CardTitle>Domain adatai</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="host">Domain neve</Label>
                 <Input
                   id="host"
@@ -89,7 +91,7 @@ export default function NewDomainPage() {
                   onChange={(e) => setHost(e.target.value)}
                   disabled={isLoading}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="font-mono text-xs text-onSurface-variant">
                   Csak kisbetűs formátumban (pl. pelda.hu, sub.domain.com)
                 </p>
               </div>
@@ -102,13 +104,13 @@ export default function NewDomainPage() {
                     checked={isSharedHosting}
                     onChange={(e) => setIsSharedHosting(e.target.checked)}
                     disabled={isLoading}
-                    className="mt-0.5 size-4 cursor-pointer rounded border-border accent-brand-600"
+                    className="mt-0.5 size-4 cursor-pointer accent-pulse"
                   />
                   <div className="flex flex-col gap-0.5">
                     <Label htmlFor="isSharedHosting" className="cursor-pointer">
                       Megosztott hosting
                     </Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-onSurface-variant">
                       Jelöld be, ha a domain megosztott tárhelyen fut. A vizsgálat
                       csak passzív módban fog zajlani, hogy ne zavarjon más
                       weboldalakat.
@@ -117,7 +119,7 @@ export default function NewDomainPage() {
                 </div>
 
                 {isSharedHosting && (
-                  <div className="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                  <div className="border-l-2 border-forge bg-forge-dark/20 px-3 py-2 text-xs text-forge">
                     Figyelem: Megosztott hostingen futó domaineken aktív vizsgálat
                     nem hajtható végre. Csak passzív felderítés lesz elérhető.
                   </div>
@@ -125,9 +127,9 @@ export default function NewDomainPage() {
               </div>
 
               {error && (
-                <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <div className="border-l-2 border-error bg-error-container/20 px-3 py-2 text-sm text-error">
                   {error}
-                </p>
+                </div>
               )}
 
               <div className="flex gap-2">

@@ -10,6 +10,8 @@ import domainRoutes from './routes/domains.routes.js';
 import verificationRoutes from './routes/verification.routes.js';
 import scansRoutes from './routes/scans.routes.js';
 import vulnerabilitiesRoutes from './routes/vulnerabilities.routes.js';
+import reportsRoutes from './routes/reports.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 import { sql } from './lib/db.js';
 import { closeScanQueue } from './services/scan.service.js';
 
@@ -39,6 +41,8 @@ async function buildServer() {
   await app.register(verificationRoutes, { prefix: '/api/v1/domains' });
   await app.register(scansRoutes, { prefix: '/api/v1/scans' });
   await app.register(vulnerabilitiesRoutes, { prefix: '/api/v1' });
+  await app.register(reportsRoutes, { prefix: '/api/v1' });
+  await app.register(adminRoutes, { prefix: '/api/v1/admin' });
 
   app.get('/api/v1/health', async () => {
     return {

@@ -41,16 +41,25 @@ export function AppShell({ user, children }: AppShellProps) {
     (user.user_metadata?.display_name as string | undefined) ?? displayEmail;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-void">
       {/* Sidebar */}
-      <aside className="hidden w-56 flex-col border-r border-border bg-sidebar md:flex">
-        <div className="flex h-14 items-center border-b border-border px-4">
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight">
-            hax<span className="text-brand-600">vibe</span>
+      <aside className="hidden w-56 flex-col bg-surface-low md:flex">
+        {/* Logo */}
+        <div className="flex h-14 items-center gap-2 px-4">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-widest text-onSurface"
+          >
+            <span className="relative flex size-2 shrink-0">
+              <span className="absolute inline-flex size-full animate-ping bg-pulse opacity-60" />
+              <span className="relative inline-flex size-2 bg-pulse" />
+            </span>
+            HAXVIBE
           </Link>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 p-2 pt-3">
+        {/* Nav items */}
+        <nav className="flex flex-1 flex-col gap-0.5 px-2 pt-2">
           {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
             const isActive = pathname === href || pathname.startsWith(href + '/');
             return (
@@ -58,10 +67,10 @@ export function AppShell({ user, children }: AppShellProps) {
                 key={href}
                 href={href}
                 className={cn(
-                  'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-brand-600 text-white'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                    ? 'border-l-2 border-pulse bg-surface-mid pl-[10px] text-pulse'
+                    : 'text-onSurface-variant hover:bg-surface-mid hover:text-onSurface',
                 )}
               >
                 <Icon className="size-4 shrink-0" />
@@ -70,19 +79,28 @@ export function AppShell({ user, children }: AppShellProps) {
             );
           })}
         </nav>
+
+        {/* Sidebar footer — user email */}
+        <div className="border-t border-outline-variant/10 px-4 py-3">
+          <p className="truncate text-xs text-onSurface-variant">{displayEmail}</p>
+        </div>
       </aside>
 
       {/* Main area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top header */}
-        <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
+        <header className="flex h-14 items-center justify-between bg-surface-mid px-4">
           {/* Mobile logo */}
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight md:hidden">
-            hax<span className="text-brand-600">vibe</span>
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-widest text-onSurface md:hidden"
+          >
+            <span className="size-1.5 bg-pulse" />
+            HAXVIBE
           </Link>
 
-          {/* Mobile nav (simple links) */}
-          <nav className="flex gap-2 md:hidden">
+          {/* Mobile nav */}
+          <nav className="flex gap-1 md:hidden">
             {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
               const isActive = pathname === href || pathname.startsWith(href + '/');
               return (
@@ -90,10 +108,10 @@ export function AppShell({ user, children }: AppShellProps) {
                   key={href}
                   href={href}
                   className={cn(
-                    'flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors',
                     isActive
-                      ? 'bg-brand-600 text-white'
-                      : 'text-muted-foreground hover:bg-muted',
+                      ? 'text-pulse'
+                      : 'text-onSurface-variant hover:bg-surface-high hover:text-onSurface',
                   )}
                 >
                   <Icon className="size-3.5 shrink-0" />
@@ -109,23 +127,23 @@ export function AppShell({ user, children }: AppShellProps) {
           {/* User dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm font-medium text-onSurface-variant transition-colors hover:bg-surface-high hover:text-onSurface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="max-w-[160px] truncate">{displayName}</span>
               <ChevronDown className="size-3.5 opacity-60" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-48">
+            <DropdownMenuContent align="end" className="min-w-48 bg-surface-mid border-outline-variant/20">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-medium">{displayName}</span>
-                  <span className="text-xs text-muted-foreground truncate">{displayEmail}</span>
+                  <span className="text-sm font-medium text-onSurface">{displayName}</span>
+                  <span className="truncate text-xs text-onSurface-variant">{displayEmail}</span>
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
+              <DropdownMenuSeparator className="bg-outline-variant/20" />
               <DropdownMenuItem
                 variant="destructive"
                 onClick={handleLogout}
-                className="cursor-pointer"
+                className="cursor-pointer text-error hover:bg-error-container/20"
               >
                 <LogOut className="size-4" />
                 Kijelentkezés
@@ -135,7 +153,7 @@ export function AppShell({ user, children }: AppShellProps) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto bg-void p-6">{children}</main>
       </div>
     </div>
   );

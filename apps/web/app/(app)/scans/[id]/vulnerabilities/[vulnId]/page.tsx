@@ -37,7 +37,7 @@ interface VulnerabilityDetail {
 }
 
 // ---------------------------------------------------------------------------
-// Severity config
+// Severity config — Sovereign Terminal palette
 // ---------------------------------------------------------------------------
 
 const SEVERITY_CONFIG: Record<
@@ -46,23 +46,23 @@ const SEVERITY_CONFIG: Record<
 > = {
   critical: {
     label: 'Kritikus',
-    badgeClass: 'border-red-300 bg-red-100 text-red-800',
+    badgeClass: 'border-severity-critical/30 bg-severity-critical/10 text-severity-critical',
   },
   high: {
     label: 'Magas',
-    badgeClass: 'border-orange-300 bg-orange-100 text-orange-800',
+    badgeClass: 'border-severity-high/30 bg-severity-high/10 text-severity-high',
   },
   medium: {
     label: 'Közepes',
-    badgeClass: 'border-yellow-300 bg-yellow-100 text-yellow-800',
+    badgeClass: 'border-severity-medium/30 bg-severity-medium/10 text-severity-medium',
   },
   low: {
     label: 'Alacsony',
-    badgeClass: 'border-blue-300 bg-blue-100 text-blue-800',
+    badgeClass: 'border-severity-low/30 bg-severity-low/10 text-severity-low',
   },
   info: {
     label: 'Információs',
-    badgeClass: 'border-gray-300 bg-gray-100 text-gray-700',
+    badgeClass: 'border-severity-info/30 bg-severity-info/10 text-severity-info',
   },
 };
 
@@ -92,7 +92,7 @@ function SeverityBadge({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center rounded-full border font-semibold',
+        'inline-flex shrink-0 items-center border font-semibold',
         size === 'large' ? 'px-4 py-1.5 text-sm' : 'px-2.5 py-0.5 text-xs',
         cfg.badgeClass,
       )}
@@ -133,14 +133,12 @@ export default async function VulnerabilityDetailPage({
     notFound();
   }
 
-  const severityCfg = SEVERITY_CONFIG[vuln.severity];
-
   return (
     <div className="flex flex-col gap-6">
       {/* Back link */}
       <Link
         href={`/scans/${scanId}/vulnerabilities`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
       >
         <ArrowLeft className="size-4" />
         Vissza a találatokhoz
@@ -149,7 +147,7 @@ export default async function VulnerabilityDetailPage({
       {/* Header */}
       <div className="flex flex-col gap-3">
         <SeverityBadge severity={vuln.severity} size="large" />
-        <h1 className="text-2xl font-bold leading-tight tracking-tight">
+        <h1 className="font-display text-2xl font-bold leading-tight text-onSurface">
           {vuln.title}
         </h1>
       </div>
@@ -163,10 +161,10 @@ export default async function VulnerabilityDetailPage({
           {/* Description */}
           {vuln.description && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                 Leírás
               </p>
-              <p className="text-sm leading-relaxed">{vuln.description}</p>
+              <p className="text-sm leading-relaxed text-onSurface">{vuln.description}</p>
             </div>
           )}
 
@@ -174,15 +172,15 @@ export default async function VulnerabilityDetailPage({
           <div className="grid grid-cols-[auto_1fr] items-start gap-x-6 gap-y-2 text-sm">
             {vuln.template_id && (
               <>
-                <span className="text-muted-foreground">Sablonok</span>
-                <span className="font-mono text-xs">{vuln.template_id}</span>
+                <span className="text-onSurface-variant">Sablon</span>
+                <span className="font-mono text-xs text-onSurface">{vuln.template_id}</span>
               </>
             )}
 
             {vuln.source_agent && (
               <>
-                <span className="text-muted-foreground">Forrás</span>
-                <span>
+                <span className="text-onSurface-variant">Forrás</span>
+                <span className="text-onSurface">
                   {vuln.source_agent === 'passive' ? 'Passzív vizsgálat' : 'Nuclei'}
                 </span>
               </>
@@ -190,8 +188,8 @@ export default async function VulnerabilityDetailPage({
 
             {vuln.cvss_score !== null && vuln.cvss_score !== undefined && (
               <>
-                <span className="text-muted-foreground">CVSS</span>
-                <span className="font-mono font-semibold">
+                <span className="text-onSurface-variant">CVSS</span>
+                <span className="font-mono font-semibold text-onSurface">
                   {vuln.cvss_score.toFixed(1)}
                 </span>
               </>
@@ -199,23 +197,23 @@ export default async function VulnerabilityDetailPage({
 
             {vuln.matched_url && (
               <>
-                <span className="text-muted-foreground">Érintett URL</span>
-                <span className="break-all font-mono text-xs">
+                <span className="text-onSurface-variant">Érintett URL</span>
+                <span className="break-all font-mono text-xs text-onSurface">
                   {vuln.matched_url}
                 </span>
               </>
             )}
 
             <>
-              <span className="text-muted-foreground">Rögzítve</span>
-              <span>{formatDate(vuln.created_at)}</span>
+              <span className="text-onSurface-variant">Rögzítve</span>
+              <span className="font-mono text-onSurface">{formatDate(vuln.created_at)}</span>
             </>
           </div>
 
           {/* CVE IDs */}
           {vuln.cve_ids && vuln.cve_ids.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                 CVE azonosítók
               </p>
               <div className="flex flex-wrap gap-2">
@@ -225,7 +223,7 @@ export default async function VulnerabilityDetailPage({
                     href={`https://nvd.nist.gov/vuln/detail/${cve}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 font-mono text-xs hover:bg-muted/80 hover:underline"
+                    className="inline-flex items-center border border-outline-variant/30 bg-surface-high px-2 py-0.5 font-mono text-xs text-onSurface hover:border-pulse/30 hover:text-pulse"
                   >
                     {cve}
                   </a>
@@ -237,7 +235,7 @@ export default async function VulnerabilityDetailPage({
           {/* Tags */}
           {vuln.tags && vuln.tags.length > 0 && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                 Címkék
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -259,7 +257,7 @@ export default async function VulnerabilityDetailPage({
             <CardTitle>Bizonyíték</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 font-mono text-xs leading-relaxed">
+            <pre className="overflow-x-auto bg-surface-high p-4 font-mono text-xs leading-relaxed text-onSurface">
               {JSON.stringify(vuln.evidence, null, 2)}
             </pre>
           </CardContent>
@@ -275,8 +273,8 @@ export default async function VulnerabilityDetailPage({
           <CardContent className="flex flex-col gap-6">
             {vuln.ai_explanation.what_is_it && (
               <div className="flex flex-col gap-2">
-                <h3 className="font-semibold">Mi ez?</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <h3 className="font-display font-semibold text-onSurface">Mi ez?</h3>
+                <p className="text-sm leading-relaxed text-onSurface-variant">
                   {vuln.ai_explanation.what_is_it}
                 </p>
               </div>
@@ -284,8 +282,8 @@ export default async function VulnerabilityDetailPage({
 
             {vuln.ai_explanation.why_dangerous && (
               <div className="flex flex-col gap-2">
-                <h3 className="font-semibold">Miért veszélyes?</h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
+                <h3 className="font-display font-semibold text-onSurface">Miért veszélyes?</h3>
+                <p className="text-sm leading-relaxed text-onSurface-variant">
                   {vuln.ai_explanation.why_dangerous}
                 </p>
               </div>
@@ -294,14 +292,14 @@ export default async function VulnerabilityDetailPage({
             {vuln.ai_explanation.fix_suggestions &&
               vuln.ai_explanation.fix_suggestions.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <h3 className="font-semibold">Javítási javaslatok</h3>
+                  <h3 className="font-display font-semibold text-onSurface">Javítási javaslatok</h3>
                   <ul className="flex flex-col gap-2">
                     {vuln.ai_explanation.fix_suggestions.map((suggestion, i) => (
                       <li
                         key={i}
-                        className="flex gap-3 text-sm leading-relaxed text-muted-foreground"
+                        className="flex gap-3 text-sm leading-relaxed text-onSurface-variant"
                       >
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center bg-pulse/10 text-xs font-semibold text-pulse">
                           {i + 1}
                         </span>
                         <span>{suggestion}</span>

@@ -51,7 +51,9 @@ export default async function DomainsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Domainek</h1>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
+          Domainek
+        </h1>
         <Button size="sm" render={<Link href="/domains/new" />}>
           <Plus className="size-4" />
           Új domain
@@ -59,7 +61,7 @@ export default async function DomainsPage() {
       </div>
 
       {apiError && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {apiError}
         </div>
       )}
@@ -67,7 +69,7 @@ export default async function DomainsPage() {
       {!apiError && domains.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-onSurface-variant">
               Még nincs hozzáadott domain.
             </p>
             <Button size="sm" render={<Link href="/domains/new" />}>
@@ -81,7 +83,7 @@ export default async function DomainsPage() {
       {domains.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               {domains.length} domain
             </CardTitle>
           </CardHeader>
@@ -89,20 +91,20 @@ export default async function DomainsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                  <tr className="border-b border-outline-variant/20">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Host
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Állapot
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Megosztott hosting
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Hozzáadva
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Műveletek
                     </th>
                   </tr>
@@ -111,12 +113,12 @@ export default async function DomainsPage() {
                   {domains.map((domain) => (
                     <tr
                       key={domain.id}
-                      className="border-b border-border last:border-0 hover:bg-muted/50"
+                      className="border-b border-outline-variant/10 last:border-0 hover:bg-surface-mid"
                     >
-                      <td className="px-4 py-3 font-mono font-medium">
+                      <td className="px-4 py-3 font-mono font-medium text-onSurface">
                         <Link
                           href={`/domains/${domain.id}`}
-                          className="hover:underline"
+                          className="hover:text-pulse hover:underline"
                         >
                           {domain.host}
                         </Link>
@@ -128,14 +130,10 @@ export default async function DomainsPage() {
                           <Badge variant="outline">Nem igazolt</Badge>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        {domain.is_shared_hosting ? (
-                          <span className="text-muted-foreground">Igen</span>
-                        ) : (
-                          <span className="text-muted-foreground">Nem</span>
-                        )}
+                      <td className="px-4 py-3 text-onSurface-variant">
+                        {domain.is_shared_hosting ? 'Igen' : 'Nem'}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 font-mono text-sm text-onSurface-variant">
                         {formatDate(domain.created_at)}
                       </td>
                       <td className="px-4 py-3">

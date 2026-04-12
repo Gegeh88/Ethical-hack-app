@@ -53,7 +53,7 @@ function CopyButton({ text }: { text: string }) {
 
 function CodeBlock({ children }: { children: string }) {
   return (
-    <pre className="overflow-x-auto rounded-lg bg-muted px-3 py-2.5 font-mono text-xs leading-relaxed break-all whitespace-pre-wrap">
+    <pre className="overflow-x-auto bg-surface-high px-3 py-2.5 font-mono text-xs leading-relaxed text-onSurface break-all whitespace-pre-wrap">
       {children}
     </pre>
   );
@@ -62,14 +62,14 @@ function CodeBlock({ children }: { children: string }) {
 function ResultBanner({ result }: { result: CheckResult }) {
   if (result.success) {
     return (
-      <div className="flex items-start gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+      <div className="flex items-start gap-2 border-l-2 border-pulse bg-pulse/10 px-3 py-2.5 text-sm text-pulse">
         <CheckCircle className="mt-0.5 size-4 shrink-0" />
         <span>Domain sikeresen igazolva! Átirányítás...</span>
       </div>
     );
   }
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+    <div className="flex items-start gap-2 border-l-2 border-error bg-error-container/20 px-3 py-2.5 text-sm text-error">
       <XCircle className="mt-0.5 size-4 shrink-0" />
       <span>
         Az igazolás sikertelen.{result.message ? ` ${result.message}` : ''}
@@ -202,12 +202,12 @@ export default function VerifyDomainPage() {
       <div className="flex flex-col gap-6">
         <Link
           href={`/domains/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
         >
           <ArrowLeft className="size-4" />
           Vissza a domainhez
         </Link>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-onSurface-variant">
           <Loader2 className="size-4 animate-spin" />
           Betöltés...
         </div>
@@ -220,12 +220,12 @@ export default function VerifyDomainPage() {
       <div className="flex flex-col gap-6">
         <Link
           href={`/domains/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
         >
           <ArrowLeft className="size-4" />
           Vissza a domainhez
         </Link>
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {pageError}
         </div>
       </div>
@@ -235,7 +235,6 @@ export default function VerifyDomainPage() {
   const verificationToken = tokenData?.token ?? '';
   const tokenExpiry = tokenData?.expires_at;
 
-  const dnsRecord = `Host: _ethical-scan.${domainHost}\nÉrték: ${verificationToken}`;
   const metaSnippet = `<meta name="ethical-scan-verification" content="${verificationToken}">`;
   const fileContent = verificationToken;
   const fileUrl = `https://${domainHost}/.well-known/ethical-scan-verification.txt`;
@@ -245,7 +244,7 @@ export default function VerifyDomainPage() {
       {/* Back link */}
       <Link
         href={`/domains/${id}`}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
       >
         <ArrowLeft className="size-4" />
         Vissza a domainhez
@@ -253,17 +252,17 @@ export default function VerifyDomainPage() {
 
       {/* Page heading */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
           Domain igazolása
         </h1>
-        <p className="mt-1 font-mono text-muted-foreground">{domainHost}</p>
+        <p className="mt-1 font-mono text-onSurface-variant">{domainHost}</p>
       </div>
 
       {/* Token expiry notice */}
       {tokenExpiry && (
-        <p className="text-xs text-muted-foreground">
+        <p className="font-mono text-xs text-onSurface-variant">
           Token lejárata:{' '}
-          <span className="font-medium">
+          <span className="font-medium text-onSurface">
             {new Intl.DateTimeFormat('hu-HU', {
               year: 'numeric',
               month: '2-digit',
@@ -294,24 +293,24 @@ export default function VerifyDomainPage() {
           <CardTitle>DNS (ajánlott)</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-onSurface-variant">
             Adjon hozzá egy TXT rekordot a domain DNS-beállításaiban:
           </p>
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <span className="font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               Host
             </span>
             <CodeBlock>{`_ethical-scan.${domainHost}`}</CodeBlock>
             <CopyButton text={`_ethical-scan.${domainHost}`} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <span className="font-display text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               Érték
             </span>
             <CodeBlock>{verificationToken}</CodeBlock>
             <CopyButton text={verificationToken} />
           </div>
-          <div className="rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-xs text-yellow-800 dark:border-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400">
+          <div className="border-l-2 border-forge bg-forge-dark/20 px-3 py-2 text-xs text-forge">
             A DNS propagáció akár 24 órát is igénybe vehet.
           </div>
           {methodStates.dns.result && (
@@ -344,9 +343,9 @@ export default function VerifyDomainPage() {
           <CardTitle>Meta tag</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-onSurface-variant">
             Illessze be a következő meta taget a weboldalának{' '}
-            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+            <code className="bg-surface-high px-1 py-0.5 font-mono text-xs text-onSurface">
               &lt;head&gt;
             </code>{' '}
             szekciójába:
@@ -385,11 +384,11 @@ export default function VerifyDomainPage() {
           <CardTitle>Fájl</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-onSurface-variant">
             Hozzon létre egy fájlt az alábbi útvonalon:
           </p>
           <CodeBlock>{fileUrl}</CodeBlock>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-onSurface-variant">
             A fájl tartalma legyen:
           </p>
           <CodeBlock>{fileContent}</CodeBlock>

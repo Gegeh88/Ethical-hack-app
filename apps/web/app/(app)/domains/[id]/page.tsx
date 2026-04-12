@@ -116,12 +116,12 @@ export default async function DomainDetailPage({
       <div className="flex flex-col gap-6">
         <Link
           href="/domains"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
         >
           <ArrowLeft className="size-4" />
           Vissza a domainekhez
         </Link>
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {domainError}
         </div>
       </div>
@@ -138,7 +138,7 @@ export default async function DomainDetailPage({
       {/* Back link */}
       <Link
         href="/domains"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
       >
         <ArrowLeft className="size-4" />
         Vissza a domainekhez
@@ -147,7 +147,7 @@ export default async function DomainDetailPage({
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h1 className="font-mono text-2xl font-bold tracking-tight">
+          <h1 className="font-mono text-2xl font-bold text-onSurface">
             {domain.host}
           </h1>
           <div className="flex items-center gap-2">
@@ -187,21 +187,19 @@ export default async function DomainDetailPage({
           <CardContent className="flex flex-col gap-3 text-sm">
             {isVerified ? (
               <>
-                <div className="flex items-center gap-2 text-emerald-600">
+                <div className="flex items-center gap-2 text-pulse">
                   <CheckCircle className="size-4 shrink-0" />
                   <span>Igazolva</span>
                 </div>
                 <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm">
-                  <span className="text-muted-foreground">Módszer</span>
-                  <span>{methodLabel(domain.verification_method ?? '')}</span>
-                  <span className="text-muted-foreground">Igazolva</span>
-                  <span>{formatDate(domain.verified_at!)}</span>
+                  <span className="text-onSurface-variant">Módszer</span>
+                  <span className="text-onSurface">{methodLabel(domain.verification_method ?? '')}</span>
+                  <span className="text-onSurface-variant">Igazolva</span>
+                  <span className="font-mono text-onSurface">{formatDate(domain.verified_at!)}</span>
                   {domain.verification_expires_at && (
                     <>
-                      <span className="text-muted-foreground">
-                        Token lejárata
-                      </span>
-                      <span>
+                      <span className="text-onSurface-variant">Token lejárata</span>
+                      <span className="font-mono text-onSurface">
                         {formatDate(domain.verification_expires_at)}
                       </span>
                     </>
@@ -209,7 +207,7 @@ export default async function DomainDetailPage({
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-2 text-onSurface-variant">
                 <XCircle className="size-4 shrink-0" />
                 <span>Még nem igazolt</span>
               </div>
@@ -223,12 +221,12 @@ export default async function DomainDetailPage({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 text-sm">
-              <span className="text-muted-foreground">Host</span>
-              <span className="font-mono">{domain.host}</span>
-              <span className="text-muted-foreground">Megosztott hosting</span>
-              <span>{domain.is_shared_hosting ? 'Igen' : 'Nem'}</span>
-              <span className="text-muted-foreground">Hozzáadva</span>
-              <span>{formatDateShort(domain.created_at)}</span>
+              <span className="text-onSurface-variant">Host</span>
+              <span className="font-mono text-onSurface">{domain.host}</span>
+              <span className="text-onSurface-variant">Megosztott hosting</span>
+              <span className="text-onSurface">{domain.is_shared_hosting ? 'Igen' : 'Nem'}</span>
+              <span className="text-onSurface-variant">Hozzáadva</span>
+              <span className="font-mono text-onSurface">{formatDateShort(domain.created_at)}</span>
             </div>
           </CardContent>
         </Card>
@@ -244,24 +242,24 @@ export default async function DomainDetailPage({
         </CardHeader>
         <CardContent className="p-0">
           {attempts.length === 0 ? (
-            <p className="px-4 pb-4 text-sm text-muted-foreground">
+            <p className="px-4 pb-4 text-sm text-onSurface-variant">
               Még nem volt igazolási kísérlet.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                  <tr className="border-b border-outline-variant/20">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Módszer
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Eredmény
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Dátum
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Részletek
                     </th>
                   </tr>
@@ -270,19 +268,19 @@ export default async function DomainDetailPage({
                   {attempts.map((attempt) => (
                     <tr
                       key={attempt.id}
-                      className="border-b border-border last:border-0"
+                      className="border-b border-outline-variant/10 last:border-0"
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-onSurface">
                         {methodLabel(attempt.method)}
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={
                             attempt.status === 'success'
-                              ? 'flex items-center gap-1.5 text-emerald-600'
+                              ? 'flex items-center gap-1.5 text-pulse'
                               : attempt.status === 'failed'
-                                ? 'flex items-center gap-1.5 text-destructive'
-                                : 'flex items-center gap-1.5 text-muted-foreground'
+                                ? 'flex items-center gap-1.5 text-error'
+                                : 'flex items-center gap-1.5 text-onSurface-variant'
                           }
                         >
                           {attempt.status === 'success' && (
@@ -297,10 +295,10 @@ export default async function DomainDetailPage({
                           {statusLabel(attempt.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 font-mono text-sm text-onSurface-variant">
                         {formatDate(attempt.checked_at)}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 font-mono text-xs text-onSurface-variant">
                         {attempt.error_message ?? '—'}
                       </td>
                     </tr>

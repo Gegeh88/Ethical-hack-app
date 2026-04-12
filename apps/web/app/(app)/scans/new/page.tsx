@@ -116,15 +116,17 @@ export default function NewScanPage() {
     <div className="flex flex-col gap-6">
       <Link
         href="/scans"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1.5 text-sm text-onSurface-variant hover:text-onSurface"
       >
         <ArrowLeft className="size-4" />
         Vissza a vizsgálatokhoz
       </Link>
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Új vizsgálat</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
+          Új vizsgálat
+        </h1>
+        <p className="mt-1 text-sm text-onSurface-variant">
           Válassz egy igazolt domaint és konfiguráld a vizsgálat paramétereit.
         </p>
       </div>
@@ -140,19 +142,19 @@ export default function NewScanPage() {
           </CardHeader>
           <CardContent>
             {loadingDomains && (
-              <div className="h-9 w-full animate-pulse rounded-md bg-muted" />
+              <div className="h-9 w-full animate-pulse bg-surface-high" />
             )}
 
             {!loadingDomains && domainsError && (
-              <p className="text-sm text-destructive">{domainsError}</p>
+              <p className="text-sm text-error">{domainsError}</p>
             )}
 
             {!loadingDomains && !domainsError && domains.length === 0 && (
-              <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+              <div className="border-l-2 border-forge bg-forge-dark/20 px-4 py-3 text-sm text-forge">
                 Nincs igazolt domained.{' '}
                 <Link
                   href="/domains"
-                  className="font-medium underline underline-offset-2"
+                  className="font-medium underline underline-offset-2 hover:text-forge-light"
                 >
                   Adj hozzá és igazolj egy domaint
                 </Link>{' '}
@@ -171,9 +173,10 @@ export default function NewScanPage() {
                     setSharedHostingAck(false);
                   }}
                   className={cn(
-                    'h-9 w-full rounded-md border border-input bg-background px-3 py-1',
-                    'text-sm shadow-sm transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
+                    'h-9 w-full border-0 border-b border-outline-variant bg-transparent px-0 py-1',
+                    'font-mono text-sm text-onSurface',
+                    'focus-visible:border-pulse focus-visible:outline-none focus-visible:shadow-[0_1px_0_0_#00FF41]',
+                    '[&>option]:bg-surface-mid [&>option]:text-onSurface',
                   )}
                 >
                   {domains.map((d) => (
@@ -220,9 +223,9 @@ export default function NewScanPage() {
             />
 
             {(scanType === 'active' || scanType === 'full') && (
-              <div className="mt-2 flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
-                <Info className="mt-0.5 size-4 shrink-0 text-yellow-700" />
-                <p className="text-sm text-yellow-800">
+              <div className="mt-2 flex items-start gap-3 border-l-2 border-forge bg-forge-dark/20 px-4 py-3">
+                <Info className="mt-0.5 size-4 shrink-0 text-forge" />
+                <p className="text-sm text-forge">
                   Az aktív vizsgálat tesztkéréseket küld a célszerverre. Ez akár 30 percig is
                   tarthat. Csak saját tulajdonú, igazolt domaineken végezze!
                 </p>
@@ -246,15 +249,15 @@ export default function NewScanPage() {
                 type="checkbox"
                 checked={tosAccepted}
                 onChange={(e) => setTosAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-brand-600"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-pulse"
               />
-              <span className="text-sm leading-snug">
+              <span className="text-sm leading-snug text-onSurface">
                 Elfogadom az{' '}
                 <a
                   href="/legal/tos"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                  className="font-medium text-pulse underline underline-offset-2 hover:text-pulse-dim"
                 >
                   Általános Szerződési Feltételeket
                 </a>{' '}
@@ -266,14 +269,14 @@ export default function NewScanPage() {
 
             {/* Shared hosting warning + ack */}
             {needsSharedHostingAck && (
-              <div className="flex flex-col gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                <div className="flex items-start gap-2 text-yellow-800">
+              <div className="flex flex-col gap-3 border-l-2 border-forge bg-forge-dark/20 p-4">
+                <div className="flex items-start gap-2 text-forge">
                   <AlertTriangle className="mt-0.5 size-4 shrink-0" />
                   <p className="text-sm font-medium">
                     Megosztott hosting figyelmeztetés
                   </p>
                 </div>
-                <p className="text-sm text-yellow-700">
+                <p className="text-sm text-forge/80">
                   A kiválasztott domain megosztott hosting szerveren fut. A vizsgálat
                   korlátozott, egyes ellenőrzések nem futtathatók, hogy ne zavarjuk a
                   szomszéd ügyfeleket. Az eredmények hiányosak lehetnek.
@@ -283,9 +286,9 @@ export default function NewScanPage() {
                     type="checkbox"
                     checked={sharedHostingAck}
                     onChange={(e) => setSharedHostingAck(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-brand-600"
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-forge"
                   />
-                  <span className="text-sm text-yellow-800">
+                  <span className="text-sm text-forge">
                     Tudomásul veszem, hogy megosztott hosting környezetben a vizsgálat
                     korlátozott, és az eredmények nem teljesek.
                   </span>
@@ -297,7 +300,7 @@ export default function NewScanPage() {
 
         {/* Submit error */}
         {submitError && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
             {submitError}
           </div>
         )}
@@ -342,8 +345,10 @@ function ScanTypeOption({
     <label
       htmlFor={id}
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors',
-        selected ? 'border-brand-600/40 bg-brand-50' : 'border-border hover:border-border/80',
+        'flex cursor-pointer items-start gap-3 border p-4 transition-colors',
+        selected
+          ? 'border-pulse/30 bg-pulse/5'
+          : 'border-outline-variant/20 hover:border-outline-variant/40 hover:bg-surface-mid',
       )}
     >
       <input
@@ -353,11 +358,13 @@ function ScanTypeOption({
         value={id.replace('type-', '')}
         checked={selected}
         onChange={onChange}
-        className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+        className="mt-0.5 h-4 w-4 shrink-0 accent-pulse"
       />
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-medium">{label}</span>
-        <span className="text-xs text-muted-foreground">{description}</span>
+        <span className={cn('text-sm font-medium', selected ? 'text-pulse' : 'text-onSurface')}>
+          {label}
+        </span>
+        <span className="text-xs text-onSurface-variant">{description}</span>
       </div>
     </label>
   );

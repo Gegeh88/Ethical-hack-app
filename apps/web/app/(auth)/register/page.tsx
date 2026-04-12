@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -87,102 +86,99 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-xl">
-          hax<span className="text-brand-600">vibe</span> — Regisztráció
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="displayName">Név</Label>
-            <Input
-              id="displayName"
-              name="displayName"
-              type="text"
-              placeholder="Kovács János"
-              required
-              value={form.displayName}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
+    <div className="bg-surface-low p-8">
+      <h2 className="mb-6 font-display text-lg font-semibold uppercase tracking-widest text-onSurface">
+        Regisztráció
+      </h2>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="displayName">Név</Label>
+          <Input
+            id="displayName"
+            name="displayName"
+            type="text"
+            placeholder="Kovács János"
+            required
+            value={form.displayName}
+            onChange={handleChange}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="email">E-mail cím</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="janos@pelda.hu"
+            required
+            value={form.email}
+            onChange={handleChange}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="password">Jelszó</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="Minimum 8 karakter"
+            required
+            minLength={8}
+            value={form.password}
+            onChange={handleChange}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="orgName">Szervezet neve</Label>
+          <Input
+            id="orgName"
+            name="orgName"
+            type="text"
+            placeholder="Példa Kft."
+            required
+            value={form.orgName}
+            onChange={handleChange}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="billingEmail">Számlázási e-mail</Label>
+          <Input
+            id="billingEmail"
+            name="billingEmail"
+            type="email"
+            placeholder="szamlazas@pelda.hu"
+            value={form.billingEmail}
+            onChange={handleChange}
+            disabled={isLoading}
+          />
+        </div>
+
+        {error && (
+          <div className="border-l-2 border-error bg-error-container/20 px-3 py-2 text-sm text-error">
+            {error}
           </div>
+        )}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">E-mail cím</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="janos@pelda.hu"
-              required
-              value={form.email}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-          </div>
+        <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+          {isLoading ? 'Regisztráció...' : 'Regisztráció'}
+        </Button>
+      </form>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Jelszó</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Minimum 8 karakter"
-              required
-              minLength={8}
-              value={form.password}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="orgName">Szervezet neve</Label>
-            <Input
-              id="orgName"
-              name="orgName"
-              type="text"
-              placeholder="Példa Kft."
-              required
-              value={form.orgName}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="billingEmail">Számlázási e-mail</Label>
-            <Input
-              id="billingEmail"
-              name="billingEmail"
-              type="email"
-              placeholder="szamlazas@pelda.hu"
-              value={form.billingEmail}
-              onChange={handleChange}
-              disabled={isLoading}
-            />
-          </div>
-
-          {error && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          )}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Regisztráció...' : 'Regisztráció'}
-          </Button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Már van fiókod?{' '}
-          <Link href="/login" className="font-medium text-brand-600 hover:underline">
-            Jelentkezz be
-          </Link>
-        </p>
-      </CardContent>
-    </Card>
+      <p className="mt-6 text-center text-sm text-onSurface-variant">
+        Már van fiókod?{' '}
+        <Link href="/login" className="font-medium text-pulse hover:underline">
+          Jelentkezz be
+        </Link>
+      </p>
+    </div>
   );
 }

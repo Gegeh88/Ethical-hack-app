@@ -89,7 +89,9 @@ export default async function ScansPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Vizsgálatok</h1>
+        <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-onSurface">
+          Vizsgálatok
+        </h1>
         <Button size="sm" render={<Link href="/scans/new" />}>
           <Plus className="size-4" />
           Új vizsgálat
@@ -97,7 +99,7 @@ export default async function ScansPage() {
       </div>
 
       {apiError && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="border-l-2 border-error bg-error-container/20 px-4 py-3 text-sm text-error">
           {apiError}
         </div>
       )}
@@ -105,8 +107,8 @@ export default async function ScansPage() {
       {!apiError && scans.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
-            <ScanSearch className="size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
+            <ScanSearch className="size-10 text-onSurface-variant/40" />
+            <p className="text-sm text-onSurface-variant">
               Még nem indított vizsgálatot.
             </p>
             <Button size="sm" render={<Link href="/scans/new" />}>
@@ -120,7 +122,7 @@ export default async function ScansPage() {
       {scans.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-xs font-medium uppercase tracking-widest text-onSurface-variant">
               {scans.length} vizsgálat
             </CardTitle>
           </CardHeader>
@@ -128,23 +130,23 @@ export default async function ScansPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                  <tr className="border-b border-outline-variant/20">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Domain
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Típus
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Állapot
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Haladás
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Indítva
                     </th>
-                    <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
                       Műveletek
                     </th>
                   </tr>
@@ -155,17 +157,17 @@ export default async function ScansPage() {
                     return (
                       <tr
                         key={scan.id}
-                        className="border-b border-border last:border-0 hover:bg-muted/50"
+                        className="border-b border-outline-variant/10 last:border-0 hover:bg-surface-mid"
                       >
-                        <td className="px-4 py-3 font-mono font-medium">
+                        <td className="px-4 py-3 font-mono font-medium text-onSurface">
                           <Link
                             href={`/scans/${scan.id}`}
-                            className="hover:underline"
+                            className="hover:text-pulse hover:underline"
                           >
                             {scan.domain?.host ?? scan.domain_id}
                           </Link>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="px-4 py-3 text-onSurface-variant">
                           {typeLabel(scan.type)}
                         </td>
                         <td className="px-4 py-3">
@@ -177,18 +179,18 @@ export default async function ScansPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+                            <div className="h-1 w-24 overflow-hidden bg-surface-high">
                               <div
                                 className={progressBarClass(scan.status)}
                                 style={{ width: `${scan.progress ?? 0}%` }}
                               />
                             </div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="font-mono text-xs text-onSurface-variant">
                               {scan.progress ?? 0}%
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">
+                        <td className="px-4 py-3 font-mono text-sm text-onSurface-variant">
                           {formatDate(scan.queued_at)}
                         </td>
                         <td className="px-4 py-3">
@@ -222,18 +224,19 @@ function StatusBadge({
   text: string;
   variant: 'default' | 'secondary' | 'destructive' | 'outline';
 }) {
-  // Override color for running (blue) and completed (green) which both map to 'default'
+  // Running — pulse green with animation
   if (status === 'running') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-        <span className="size-1.5 animate-pulse rounded-full bg-blue-500" />
+      <span className="inline-flex items-center gap-1.5 border border-pulse/20 bg-pulse/10 px-2 py-0.5 text-xs font-medium text-pulse">
+        <span className="size-1.5 animate-pulse bg-pulse" />
         {text}
       </span>
     );
   }
+  // Completed — pulse green solid
   if (status === 'completed') {
     return (
-      <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+      <span className="inline-flex items-center border border-pulse/20 bg-pulse/10 px-2 py-0.5 text-xs font-medium text-pulse">
         {text}
       </span>
     );
@@ -244,14 +247,14 @@ function StatusBadge({
 function progressBarClass(status: ScanJob['status']): string {
   switch (status) {
     case 'running':
-      return 'h-full rounded-full bg-blue-500 transition-all duration-500';
+      return 'h-full bg-pulse transition-all duration-500';
     case 'completed':
-      return 'h-full rounded-full bg-emerald-500';
+      return 'h-full bg-pulse';
     case 'failed':
-      return 'h-full rounded-full bg-destructive';
+      return 'h-full bg-severity-critical';
     case 'cancelled':
-      return 'h-full rounded-full bg-muted-foreground';
+      return 'h-full bg-onSurface-variant';
     default:
-      return 'h-full rounded-full bg-muted-foreground/40';
+      return 'h-full bg-onSurface-variant/30';
   }
 }

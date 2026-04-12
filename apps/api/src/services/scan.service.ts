@@ -5,7 +5,8 @@ import type { ScanType as ScanTypeEnum, ScanStatus as ScanStatusEnum } from '@ha
 import { sql } from '../lib/db.js';
 import { audit } from '../lib/audit.js';
 import { config } from '../config.js';
-import { ForbiddenError, ValidationError, NotFoundError } from '../lib/errors.js';
+import { ForbiddenError, ValidationError, NotFoundError, RateLimitError } from '../lib/errors.js';
+import { checkScanQuota, checkScanTypeAllowed } from './quota.service.js';
 
 // ---------------------------------------------------------------------------
 // BullMQ queue singleton
@@ -73,6 +74,18 @@ export async function createScan(
   consent: ConsentInput,
   req: FastifyRequest,
 ): Promise<ScanJobRow> {
+  // 0a. Quota check — enforce monthly scan limit
+  const quota = await checkScanQuota(orgId);
+  if (!quota.allowed) {
+    throw new RateLimitError(quota.reason!);
+  }
+
+  // 0b. Scan type check — free tier: passive only
+  const typeAllowed = await checkScanTypeAllowed(orgId, type);
+  if (!typeAllowed) {
+    throw new ForbiddenError('Aktiv vizsgalathoz Pro vagy Business csomag szukseges');
+  }
+
   // 1. Verify domain belongs to org AND is verified (not expired)
   const [domain] = await sql`
     SELECT id, host, is_shared_hosting

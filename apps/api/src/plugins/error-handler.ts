@@ -45,7 +45,7 @@ async function errorHandlerPlugin(fastify: FastifyInstance): Promise<void> {
 
     if (error.name === 'RateLimitError' || error.statusCode === 429) {
       return reply.status(429).send(
-        buildErrorResponse('RATE_LIMIT', 'Too many requests', requestId),
+        buildErrorResponse('RATE_LIMIT', error.message || 'Too many requests', requestId),
       );
     }
 

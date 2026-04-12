@@ -1,5 +1,6 @@
 import { sql } from '../lib/db.js';
-import { NotFoundError } from '../lib/errors.js';
+import { NotFoundError, RateLimitError } from '../lib/errors.js';
+import { checkDomainQuota } from './quota.service.js';
 
 interface DomainRow {
   id: string;
@@ -54,6 +55,12 @@ export async function createDomain(
   host: string,
   isSharedHosting: boolean,
 ): Promise<DomainRow> {
+  // Quota check — enforce domain limit per tier
+  const quota = await checkDomainQuota(orgId);
+  if (!quota.allowed) {
+    throw new RateLimitError(quota.reason!);
+  }
+
   const [domain] = await sql`
     INSERT INTO domains (organization_id, added_by, host, is_shared_hosting)
     VALUES (${orgId}, ${userId}, ${host}, ${isSharedHosting})

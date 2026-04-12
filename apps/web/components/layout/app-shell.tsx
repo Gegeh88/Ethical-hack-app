@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -133,12 +132,12 @@ export function AppShell({ user, children }: AppShellProps) {
               <ChevronDown className="size-3.5 opacity-60" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-48 bg-surface-mid border-outline-variant/20">
-              <DropdownMenuLabel className="font-normal">
+              <div className="px-1.5 py-1">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-sm font-medium text-onSurface">{displayName}</span>
                   <span className="truncate text-xs text-onSurface-variant">{displayEmail}</span>
                 </div>
-              </DropdownMenuLabel>
+              </div>
               <DropdownMenuSeparator className="bg-outline-variant/20" />
               <DropdownMenuItem
                 variant="destructive"

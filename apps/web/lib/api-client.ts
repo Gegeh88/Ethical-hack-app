@@ -1,5 +1,9 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Browser: use relative URL (Next.js rewrite proxies to API, avoids mixed content)
+// Server (SSR): use full API_URL directly (faster, no proxy loop)
+const isBrowser = typeof window !== 'undefined';
+
 export async function apiClient<T>(
   path: string,
   options: RequestInit & { token?: string } = {},
@@ -10,7 +14,8 @@ export async function apiClient<T>(
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  const res = await fetch(`${API_URL}/api/v1${path}`, { ...init, headers });
+  const baseUrl = isBrowser ? '' : (API_URL ?? '');
+  const res = await fetch(`${baseUrl}/api/v1${path}`, { ...init, headers });
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

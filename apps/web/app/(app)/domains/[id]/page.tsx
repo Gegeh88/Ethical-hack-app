@@ -27,12 +27,14 @@ interface VerificationAttempt {
   id: string;
   method: 'dns' | 'meta' | 'file';
   status: 'success' | 'failed' | 'pending';
-  checked_at: string;
-  error_message: string | null;
+  verified_at: string | null;
+  created_at: string;
+  expires_at: string | null;
 }
 
 interface VerificationResponse {
-  attempts: VerificationAttempt[];
+  current: VerificationAttempt | null;
+  history: VerificationAttempt[];
 }
 
 function formatDate(iso: string): string {
@@ -131,7 +133,7 @@ export default async function DomainDetailPage({
   if (!domain) return null;
 
   const isVerified = !!domain.verified_at;
-  const attempts = verification?.attempts ?? [];
+  const attempts = verification?.history ?? [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -260,7 +262,7 @@ export default async function DomainDetailPage({
                       Dátum
                     </th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-widest text-onSurface-variant">
-                      Részletek
+                      Lejárat
                     </th>
                   </tr>
                 </thead>
@@ -296,10 +298,10 @@ export default async function DomainDetailPage({
                         </span>
                       </td>
                       <td className="px-4 py-3 font-mono text-sm text-onSurface-variant">
-                        {formatDate(attempt.checked_at)}
+                        {attempt.verified_at ? formatDate(attempt.verified_at) : formatDate(attempt.created_at)}
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-onSurface-variant">
-                        {attempt.error_message ?? '—'}
+                        {attempt.expires_at ? formatDateShort(attempt.expires_at) : '—'}
                       </td>
                     </tr>
                   ))}

@@ -108,7 +108,7 @@ export async function getDomainById(
   // Fetch associated verification records
   const { data: verifications, error: verError } = await supabaseAdmin
     .from('domain_verifications')
-    .select('id, domain_id, method, token, status, checked_at, expires_at, created_at')
+    .select('id, domain_id, method, token, status, verified_at, expires_at, created_at')
     .eq('domain_id', domainId)
     .order('created_at', { ascending: false });
 

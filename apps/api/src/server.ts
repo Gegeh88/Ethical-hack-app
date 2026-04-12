@@ -29,8 +29,14 @@ async function buildServer() {
   });
 
   await app.register(helmet, { contentSecurityPolicy: false });
+  const corsOrigins = config.API_CORS_ORIGINS.split(',').map((s) => s.trim());
   await app.register(cors, {
-    origin: config.API_CORS_ORIGINS.split(',').map((s) => s.trim()),
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // allow non-browser requests
+      if (corsOrigins.includes(origin)) return cb(null, true);
+      if (origin.endsWith('.netlify.app')) return cb(null, true);
+      cb(new Error('CORS not allowed'), false);
+    },
     credentials: true,
   });
   await app.register(sensible);
@@ -64,7 +70,7 @@ async function main() {
     app.log.info({ signal }, 'Shutting down gracefully');
     await app.close();
     await closeScanQueue();
-    await sql.end();
+    if (sql) await sql.end();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

@@ -86,6 +86,10 @@ export async function runNucleiScan(
   await fs.mkdir(config.SCANNER_TMP_DIR, { recursive: true });
   await fs.writeFile(outputFile, '');
 
+  // Template directory on the host — pre-populated by setup script,
+  // mounted read-only so Nuclei doesn't re-download every run.
+  const hostTemplateDir = config.NUCLEI_TEMPLATES_DIR ?? '/opt/nuclei-templates';
+
   // Build Docker argument array — each flag is a separate element.
   // SECURITY: NEVER concatenate these into a single string.
   const dockerArgs = [
@@ -93,29 +97,31 @@ export async function runNucleiScan(
     '--rm',
     '--read-only',
     '--tmpfs',
-    '/tmp:rw,nosuid,size=512m',
+    '/tmp:rw,nosuid,size=128m',
     '--tmpfs',
-    '/.cache:rw,nosuid,size=128m',
+    '/.cache:rw,nosuid,size=32m',
     '--tmpfs',
-    '/.config:rw,nosuid,size=64m',
+    '/.config:rw,nosuid,size=16m',
     '-e',
     'HOME=/tmp',
     '--network',
     config.NUCLEI_NETWORK,
     '--memory',
-    '1g',
+    '512m',
     '--memory-swap',
-    '1g',
+    '512m',
     '--cpus',
-    '1.0',
+    '0.5',
     '--cap-drop',
     'ALL',
     '--security-opt',
     'no-new-privileges',
     '--pids-limit',
-    '200',
+    '100',
     '--user',
     '1000:1000',
+    '-v',
+    `${hostTemplateDir}:/opt/nuclei-templates:ro`,
     '-v',
     `${outputFile}:/output/results.jsonl:rw`,
     config.NUCLEI_IMAGE,
@@ -130,6 +136,7 @@ export async function runNucleiScan(
     String(config.NUCLEI_CONCURRENCY),
     '-severity',
     severityFilter.join(','),
+    '-t', '/opt/nuclei-templates/',
     '-timeout',
     '10',
     '-retries',
@@ -137,7 +144,7 @@ export async function runNucleiScan(
     '-stats',
     '-si',
     '5',
-    '-ud', '/tmp/nuclei-templates',
+    '-duc',
     '-no-color',
   ];
 

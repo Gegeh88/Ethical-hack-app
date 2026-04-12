@@ -18,11 +18,12 @@ const configSchema = z.object({
   BULL_RATE_LIMIT_MAX: z.coerce.number().default(10),
   BULL_RATE_LIMIT_DURATION_MS: z.coerce.number().default(60_000),
 
-  NUCLEI_MAX_DURATION_MS: z.coerce.number().default(1_800_000),
-  NUCLEI_RATE_LIMIT: z.coerce.number().default(100),
-  NUCLEI_CONCURRENCY: z.coerce.number().default(10),
+  NUCLEI_MAX_DURATION_MS: z.coerce.number().default(600_000),
+  NUCLEI_RATE_LIMIT: z.coerce.number().default(50),
+  NUCLEI_CONCURRENCY: z.coerce.number().default(5),
   NUCLEI_IMAGE: z.string().default('projectdiscovery/nuclei:v3'),
   NUCLEI_NETWORK: z.string().default('nuclei-outbound'),
+  NUCLEI_TEMPLATES_DIR: z.string().default('/opt/nuclei-templates'),
   SCANNER_TMP_DIR: z.string().default('/tmp/scanner'),
 });
 

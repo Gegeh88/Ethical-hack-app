@@ -9,14 +9,20 @@ import { ForbiddenError, ValidationError, NotFoundError, RateLimitError } from '
 import { checkScanQuota, checkScanTypeAllowed } from './quota.service.js';
 
 // ---------------------------------------------------------------------------
-// BullMQ queue singleton
+// BullMQ queue singleton (lazy-initialized to avoid blocking startup if Redis is down)
 // ---------------------------------------------------------------------------
 
-const redisConnection = new Redis(config.REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
+let _scanQueue: Queue | null = null;
 
-export const scanQueue = new Queue('scan', { connection: redisConnection });
+function getScanQueue(): Queue {
+  if (!_scanQueue) {
+    const conn = new Redis(config.REDIS_URL, { maxRetriesPerRequest: null });
+    _scanQueue = new Queue('scan', { connection: conn });
+  }
+  return _scanQueue;
+}
+
+export { _scanQueue as scanQueue };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -197,7 +203,7 @@ export async function createScan(
   });
 
   // 8. Enqueue BullMQ job
-  const bullJob = await scanQueue.add('scan', {
+  const bullJob = await getScanQueue().add('scan', {
     scanJobId: scanJob.id,
     domainId,
     host: domain.host,
@@ -301,6 +307,7 @@ export async function getScanById(
 // ---------------------------------------------------------------------------
 
 export async function closeScanQueue(): Promise<void> {
-  await scanQueue.close();
-  redisConnection.disconnect();
+  if (_scanQueue) {
+    await _scanQueue.close();
+  }
 }

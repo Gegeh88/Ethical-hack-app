@@ -9,10 +9,13 @@ FROM golang:1.24-alpine AS nuclei-builder
 RUN apk add --no-cache git
 
 # Install Nuclei from source (supports both amd64 and arm64)
-RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+ENV GOPATH=/go
+RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
+    ls -la /go/bin/ && \
+    /go/bin/nuclei -version
 
 # Download templates at build time
-RUN /root/go/bin/nuclei -update-templates -ud /opt/nuclei-templates 2>/dev/null || true
+RUN /go/bin/nuclei -update-templates -ud /opt/nuclei-templates 2>/dev/null || true
 
 # --- Stage 2: Node.js app ---
 FROM node:20-alpine AS runtime
@@ -20,7 +23,7 @@ FROM node:20-alpine AS runtime
 RUN apk add --no-cache tini
 
 # Copy Nuclei binary + templates from builder
-COPY --from=nuclei-builder /root/go/bin/nuclei /usr/local/bin/nuclei
+COPY --from=nuclei-builder /go/bin/nuclei /usr/local/bin/nuclei
 COPY --from=nuclei-builder /opt/nuclei-templates /opt/nuclei-templates
 
 # Create non-root user

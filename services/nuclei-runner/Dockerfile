@@ -1,51 +1,50 @@
 # ============================================================
 # haxvibe nuclei-runner — Cloud Run serverless scanner
-# Runs Nuclei as a native binary (no Docker-in-Docker).
+# Downloads pre-built Nuclei binary (no Go compilation needed).
 # ============================================================
 
-# --- Stage 1: Install Nuclei binary + download templates ---
-FROM golang:1.24-alpine AS nuclei-builder
+FROM node:20-alpine
 
-RUN apk add --no-cache git
+RUN apk add --no-cache tini curl unzip
 
-# Install Nuclei from source (supports both amd64 and arm64)
-ENV GOPATH=/go
-RUN go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest && \
-    ls -la /go/bin/ && \
-    /go/bin/nuclei -version
-
-# Download templates at build time
-RUN /go/bin/nuclei -update-templates -ud /opt/nuclei-templates 2>/dev/null || true
-
-# --- Stage 2: Node.js app ---
-FROM node:20-alpine AS runtime
-
-RUN apk add --no-cache tini
-
-# Copy Nuclei binary + templates from builder
-COPY --from=nuclei-builder /go/bin/nuclei /usr/local/bin/nuclei
-COPY --from=nuclei-builder /opt/nuclei-templates /opt/nuclei-templates
+# Download pre-built Nuclei binary from GitHub releases
+RUN NUCLEI_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/nuclei/releases/latest | grep '"tag_name"' | cut -d'"' -f4) && \
+    VERSION_NUM=${NUCLEI_VERSION#v} && \
+    echo "Installing Nuclei ${VERSION_NUM}" && \
+    curl -sSL "https://github.com/projectdiscovery/nuclei/releases/download/${NUCLEI_VERSION}/nuclei_${VERSION_NUM}_linux_amd64.zip" -o /tmp/nuclei.zip && \
+    unzip /tmp/nuclei.zip -d /usr/local/bin/ && \
+    chmod +x /usr/local/bin/nuclei && \
+    rm /tmp/nuclei.zip && \
+    nuclei -version
 
 # Create non-root user
 RUN addgroup -g 1000 scanner && adduser -u 1000 -G scanner -D scanner
-RUN mkdir -p /home/scanner/.config/nuclei /tmp/scanner && \
-    chown -R scanner:scanner /home/scanner /tmp/scanner
+RUN mkdir -p /home/scanner/.config/nuclei /opt/nuclei-templates /tmp/scanner && \
+    chown -R scanner:scanner /home/scanner /opt/nuclei-templates /tmp/scanner
 
+# Download templates as scanner user
+USER scanner
+RUN nuclei -update-templates -ud /opt/nuclei-templates 2>&1 || true
+
+# Switch back to root for app setup
+USER root
 WORKDIR /app
 
-# Install tsx globally for running TypeScript
+# Install tsx globally
 RUN npm install -g tsx
 
-# Copy shared-types (dependency) directly
+# Copy shared-types (workspace dependency) directly into node_modules
 COPY packages/shared-types/ ./node_modules/@haxvibe/shared-types/
 
-# Copy nuclei-runner source + deps
+# Copy nuclei-runner package and install deps
 COPY services/nuclei-runner/package.json ./
 RUN npm install --omit=dev --ignore-scripts 2>/dev/null || true
 
+# Copy source
 COPY services/nuclei-runner/src/ ./src/
 COPY services/nuclei-runner/tsconfig.json ./
 
+# Run as non-root
 USER scanner
 ENV NODE_ENV=production
 ENV HOME=/home/scanner

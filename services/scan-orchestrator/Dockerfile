@@ -15,7 +15,6 @@ WORKDIR /app
 COPY apps/worker/package.json ./package.json
 RUN sed -i '/"@haxvibe\/shared-types"/d' package.json \
     && sed -i '/"bullmq"/d' package.json \
-    && sed -i '/"ioredis"/d' package.json \
     && npm install
 
 # Copy shared-types source into node_modules (replaces workspace: link)

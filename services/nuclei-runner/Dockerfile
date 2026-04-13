@@ -4,7 +4,7 @@
 # ============================================================
 
 # --- Stage 1: Install Nuclei binary + download templates ---
-FROM golang:1.22-alpine AS nuclei-builder
+FROM golang:1.24-alpine AS nuclei-builder
 
 RUN apk add --no-cache git curl unzip
 

@@ -17,8 +17,8 @@ RUN NUCLEI_VERSION=$(curl -s https://api.github.com/repos/projectdiscovery/nucle
     rm /tmp/nuclei.zip && \
     nuclei -version
 
-# Create non-root user
-RUN addgroup -g 1000 scanner && adduser -u 1000 -G scanner -D scanner
+# Create non-root user (GID/UID 1001 — 1000 is taken by 'node' in alpine)
+RUN addgroup -g 1001 scanner && adduser -u 1001 -G scanner -D scanner
 RUN mkdir -p /home/scanner/.config/nuclei /opt/nuclei-templates /tmp/scanner && \
     chown -R scanner:scanner /home/scanner /opt/nuclei-templates /tmp/scanner
 

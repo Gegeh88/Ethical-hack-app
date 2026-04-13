@@ -33,11 +33,11 @@ WORKDIR /app
 # Install tsx globally
 RUN npm install -g tsx
 
-# Copy nuclei-runner package.json and install ALL deps (no --omit=dev, no error swallowing)
+# Copy nuclei-runner package.json, strip workspace: protocol, then install
 COPY services/nuclei-runner/package.json ./package.json
-RUN npm install
+RUN sed -i '/"@haxvibe\/shared-types"/d' package.json && npm install
 
-# Copy shared-types source into node_modules (workspace link replacement)
+# Copy shared-types source into node_modules (replaces workspace: link)
 COPY packages/shared-types/ ./node_modules/@haxvibe/shared-types/
 
 # Copy source

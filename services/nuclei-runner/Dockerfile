@@ -33,16 +33,19 @@ WORKDIR /app
 # Install tsx globally
 RUN npm install -g tsx
 
-# Copy shared-types (workspace dependency) directly into node_modules
-COPY packages/shared-types/ ./node_modules/@haxvibe/shared-types/
+# Copy nuclei-runner package.json and install ALL deps (no --omit=dev, no error swallowing)
+COPY services/nuclei-runner/package.json ./package.json
+RUN npm install
 
-# Copy nuclei-runner package and install deps
-COPY services/nuclei-runner/package.json ./
-RUN npm install --omit=dev --ignore-scripts 2>/dev/null || true
+# Copy shared-types source into node_modules (workspace link replacement)
+COPY packages/shared-types/ ./node_modules/@haxvibe/shared-types/
 
 # Copy source
 COPY services/nuclei-runner/src/ ./src/
 COPY services/nuclei-runner/tsconfig.json ./
+
+# Verify deps are installed
+RUN node -e "require('pino'); require('zod'); console.log('deps OK')"
 
 # Run as non-root
 USER scanner

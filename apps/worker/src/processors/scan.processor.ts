@@ -5,9 +5,9 @@ import { emitProgress } from '../lib/emit-progress.js';
 import { assertValidHost } from '../lib/host-validator.js';
 import { canScanDomain } from '../lib/can-scan-domain.js';
 import { runPassiveScan } from '../agents/passive-scanner.agent.js';
-import { runNucleiScan } from '../agents/nuclei-scanner.agent.js';
+import { runNucleiScan } from '../agents/nuclei-scanner-factory.js';
 import { generateReport } from '../agents/report-generator.agent.js';
-import type { FindingInput } from '../agents/passive-scanner.agent.js';
+import type { FindingInput } from '../agents/nuclei-scanner-factory.js';
 
 /**
  * Payload received from the BullMQ `scan` queue.

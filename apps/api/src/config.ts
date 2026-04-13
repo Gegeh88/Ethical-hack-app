@@ -15,6 +15,9 @@ const configSchema = z.object({
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
 
   CURRENT_TOS_VERSION: z.string().default('2026-04-01'),
+
+  // Shared secret for Cloud Run scanner progress callbacks (optional, only needed in cloudrun mode)
+  SCANNER_AUTH_TOKEN: z.string().min(20).optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;

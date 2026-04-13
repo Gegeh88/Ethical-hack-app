@@ -25,6 +25,34 @@ const configSchema = z.object({
   NUCLEI_NETWORK: z.string().default('nuclei-outbound'),
   NUCLEI_TEMPLATES_DIR: z.string().default('/opt/nuclei-templates'),
   SCANNER_TMP_DIR: z.string().default('/tmp/scanner'),
+
+  // Scanner execution mode: 'docker' (Docker-in-Docker) or 'cloudrun' (HTTP to Cloud Run)
+  SCANNER_MODE: z.enum(['docker', 'cloudrun']).default('docker'),
+
+  // Cloud Run settings (required when SCANNER_MODE=cloudrun)
+  CLOUDRUN_SCANNER_URL: z.string().url().optional(),
+  CLOUDRUN_SCANNER_AUTH_TOKEN: z.string().min(20).optional(),
+  CLOUDRUN_SCANNER_TIMEOUT_MS: z.coerce.number().default(660_000), // slightly > NUCLEI_MAX_DURATION_MS
+
+  // Callback URL for Cloud Run progress reports (API base URL)
+  CLOUDRUN_CALLBACK_URL: z.string().url().optional(),
+}).superRefine((data, ctx) => {
+  if (data.SCANNER_MODE === 'cloudrun') {
+    if (!data.CLOUDRUN_SCANNER_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CLOUDRUN_SCANNER_URL'],
+        message: 'Required when SCANNER_MODE=cloudrun',
+      });
+    }
+    if (!data.CLOUDRUN_SCANNER_AUTH_TOKEN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CLOUDRUN_SCANNER_AUTH_TOKEN'],
+        message: 'Required when SCANNER_MODE=cloudrun',
+      });
+    }
+  }
 });
 
 export type WorkerConfig = z.infer<typeof configSchema>;

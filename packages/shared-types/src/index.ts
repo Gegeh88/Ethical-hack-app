@@ -1,5 +1,27 @@
 import { z } from 'zod';
 
+// Re-export Nuclei shared types (used by worker, Cloud Run service, API)
+export {
+  SEVERITY_MAP,
+  ALLOWED_CATEGORIES,
+  DEFAULT_SCAN_CATEGORIES,
+  SEVERITY_FILTER,
+  isValidHost,
+  assertValidHost,
+  normalizeNucleiFinding,
+  CloudRunScanRequest,
+  CloudRunScanResponse,
+  CloudRunScanResponseMeta,
+  ScanProgressCallback,
+} from './nuclei.js';
+export type {
+  NucleiSeverity,
+  NucleiFindingInput,
+  CloudRunScanRequest as CloudRunScanRequestType,
+  CloudRunScanResponse as CloudRunScanResponseType,
+  ScanProgressCallback as ScanProgressCallbackType,
+} from './nuclei.js';
+
 // ============================================================
 // Enums
 // ============================================================

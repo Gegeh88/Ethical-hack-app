@@ -19,6 +19,22 @@ services:
       retries: 5
     command: ["redis-server", "--save", "20", "1", "--loglevel", "warning"]
 
+  # Optional: local nuclei-runner for testing Cloud Run mode without deploying.
+  # Enable with: docker compose --profile cloudrun up
+  nuclei-runner:
+    profiles: ["cloudrun"]
+    build:
+      context: .
+      dockerfile: services/nuclei-runner/Dockerfile
+    container_name: haxvibe-nuclei-runner
+    ports:
+      - "8090:8080"
+    environment:
+      - SCANNER_AUTH_TOKEN=local-dev-token-minimum-20chars
+      - LOG_LEVEL=debug
+      - NODE_ENV=development
+    restart: unless-stopped
+
 volumes:
   redis_data:
     name: haxvibe_redis_data

@@ -1,8 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { Redis } from 'ioredis';
 import { CreateScanRequest, PaginationQuery, ScanStatus } from '@haxvibe/shared-types';
 import { z } from 'zod';
-import { config } from '../config.js';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { createScan, listScans, getScanById } from '../services/scan.service.js';
@@ -107,7 +105,7 @@ export default async function scansRoutes(fastify: FastifyInstance): Promise<voi
   );
 
   // -----------------------------------------------------------------------
-  // GET /:id/stream — SSE progress stream
+  // GET /:id/stream — SSE progress stream (polls Supabase every 3 seconds)
   // -----------------------------------------------------------------------
   fastify.get<{
     Params: { id: string };
@@ -195,24 +193,40 @@ export default async function scansRoutes(fastify: FastifyInstance): Promise<voi
       }
 
       // ------------------------------------------------------------------
-      // Subscribe to Redis pub/sub for this exact scan channel
+      // Poll Supabase every 3 seconds for progress updates
       // ------------------------------------------------------------------
-      const sub = new Redis(config.REDIS_URL);
-      await sub.subscribe(`scan:${id}`);
+      let lastProgress = scan.progress as number;
+      let lastStatus = scan.status as string;
 
-      sub.on('message', (_channel: string, message: string) => {
+      const pollInterval = setInterval(async () => {
         try {
-          const evt = JSON.parse(message) as { type: string; payload: unknown };
-          send(evt.type, evt.payload);
+          const { data: updated } = await supabaseAdmin
+            .from('scan_jobs')
+            .select('status, progress, current_step')
+            .eq('id', id)
+            .single();
 
-          if (evt.type === 'done') {
+          if (!updated) return;
+
+          const progress = updated.progress as number;
+          const status = updated.status as string;
+          const step = updated.current_step as string | null;
+
+          if (progress !== lastProgress || status !== lastStatus) {
+            send('progress', { pct: progress, step });
+            lastProgress = progress;
+            lastStatus = status;
+          }
+
+          if (['completed', 'failed', 'cancelled'].includes(status)) {
+            send('done', { status });
+            clearInterval(pollInterval);
             reply.raw.end();
-            void sub.quit();
           }
         } catch (err) {
-          req.log.warn({ err }, 'Invalid SSE message from Redis');
+          req.log.warn({ err }, 'SSE poll error');
         }
-      });
+      }, 3_000);
 
       // Heartbeat every 15 seconds to keep the connection alive
       const heartbeat = setInterval(() => {
@@ -221,8 +235,8 @@ export default async function scansRoutes(fastify: FastifyInstance): Promise<voi
 
       // Cleanup on client disconnect
       req.raw.on('close', () => {
+        clearInterval(pollInterval);
         clearInterval(heartbeat);
-        void sub.quit();
       });
     },
   );

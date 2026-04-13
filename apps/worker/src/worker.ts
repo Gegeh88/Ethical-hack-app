@@ -67,7 +67,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'Shutting down worker');
     await scanWorker.close();
-    await redisPub.quit();
+    if (redisPub) await redisPub.quit();
     process.exit(0);
   };
   process.on('SIGTERM', () => void shutdown('SIGTERM'));

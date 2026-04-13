@@ -4,11 +4,18 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'staging', 'production']).default('development'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 
+  // Worker execution mode: 'bullmq' (Redis polling) or 'http' (Cloud Run serverless)
+  WORKER_MODE: z.enum(['bullmq', 'http']).default('bullmq'),
+  WORKER_PORT: z.coerce.number().default(8080),
+
+  // Auth token for HTTP mode (API -> worker calls)
+  SCANNER_AUTH_TOKEN: z.string().min(20).optional(),
+
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20),
 
   DATABASE_URL: z.string().url().optional(),
-  REDIS_URL: z.string().url().default('redis://localhost:6379'),
+  REDIS_URL: z.string().url().optional(),
 
   GEMINI_API_KEY: z.string().min(20),
   GEMINI_MODEL_FAST: z.string().default('gemini-2.5-flash'),
@@ -37,6 +44,28 @@ const configSchema = z.object({
   // Callback URL for Cloud Run progress reports (API base URL)
   CLOUDRUN_CALLBACK_URL: z.string().url().optional(),
 }).superRefine((data, ctx) => {
+  // HTTP mode requires auth token
+  if (data.WORKER_MODE === 'http') {
+    if (!data.SCANNER_AUTH_TOKEN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SCANNER_AUTH_TOKEN'],
+        message: 'Required when WORKER_MODE=http',
+      });
+    }
+  }
+
+  // BullMQ mode requires Redis
+  if (data.WORKER_MODE === 'bullmq') {
+    if (!data.REDIS_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['REDIS_URL'],
+        message: 'Required when WORKER_MODE=bullmq',
+      });
+    }
+  }
+
   if (data.SCANNER_MODE === 'cloudrun') {
     if (!data.CLOUDRUN_SCANNER_URL) {
       ctx.addIssue({

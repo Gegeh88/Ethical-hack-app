@@ -10,8 +10,8 @@ import { generateReport } from '../agents/report-generator.agent.js';
 import type { FindingInput } from '../agents/nuclei-scanner-factory.js';
 
 /**
- * Payload received from the BullMQ `scan` queue.
- * The API enqueues this when a user requests a scan.
+ * Payload received from the BullMQ `scan` queue or HTTP /execute endpoint.
+ * The API enqueues/sends this when a user requests a scan.
  */
 export interface ScanJobData {
   scanJobId: string;
@@ -24,7 +24,10 @@ export interface ScanJobData {
 const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
 
 /**
- * Main scan job processor.
+ * Core scan execution logic — decoupled from BullMQ.
+ *
+ * Called directly by the HTTP server (Cloud Run mode) or via the
+ * BullMQ wrapper `processScanJob`.
  *
  * Workflow:
  * 1. Defense-in-depth: re-verify domain authorization (canScanDomain)
@@ -33,13 +36,13 @@ const logger = pino({ level: process.env.LOG_LEVEL ?? 'info' });
  * 4. Run passive scan (always)
  * 5. Run Nuclei active scan if type is active/full
  * 6. Persist vulnerabilities
- * 7. Mark completed
+ * 7. Generate AI report (non-fatal)
+ * 8. Mark completed
  *
- * On failure: mark scan as failed, emit error, then re-throw
- * so BullMQ retries per defaultJobOptions.
+ * On failure: mark scan as failed in DB, emit error.
  */
-export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
-  const { scanJobId, domainId, host, type } = job.data;
+export async function executeScan(data: ScanJobData): Promise<void> {
+  const { scanJobId, domainId, host, type, isSharedHosting } = data;
   const jobLogger = logger.child({ scanJobId, host, type, agent: 'scan-processor' });
 
   try {
@@ -92,7 +95,7 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
     if (type === 'active' || type === 'full') {
       jobLogger.info('Starting Nuclei active scan');
       await emitProgress(scanJobId, 'progress', { step: 'nuclei', pct: 50 });
-      nucleiFindings = await runNucleiScan(scanJobId, host, job.data.isSharedHosting, jobLogger);
+      nucleiFindings = await runNucleiScan(scanJobId, host, isSharedHosting, jobLogger);
     }
 
     // -------------------------------------------------------
@@ -170,8 +173,16 @@ export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
       jobLogger.warn({ pubErr }, 'Failed to emit failure progress');
     });
 
-    throw err; // let BullMQ retry
+    throw err;
   }
+}
+
+/**
+ * BullMQ job processor wrapper.
+ * Delegates to executeScan, re-throws so BullMQ retries apply.
+ */
+export async function processScanJob(job: Job<ScanJobData>): Promise<void> {
+  return executeScan(job.data);
 }
 
 /**

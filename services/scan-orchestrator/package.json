@@ -1,0 +1,6 @@
+{
+  "name": "@haxvibe/scan-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloud Run scan orchestrator — HTTP wrapper around the worker scan pipeline"
+}

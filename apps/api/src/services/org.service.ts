@@ -1,5 +1,5 @@
 import { sql } from '../lib/db.js';
-import { ForbiddenError } from '../lib/errors.js';
+import { ForbiddenError, ValidationError } from '../lib/errors.js';
 
 interface CreateOrgResult {
   org: {
@@ -24,6 +24,10 @@ export async function createOrganization(
   name: string,
   billingEmail: string,
 ): Promise<CreateOrgResult> {
+  if (!sql) {
+    throw new ValidationError('Database connection not configured (DATABASE_URL is required for organization creation)');
+  }
+
   return await sql.begin(async (tx) => {
     // 1. Create the organization
     const [org] = await tx`

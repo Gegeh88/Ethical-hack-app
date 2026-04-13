@@ -1,5 +1,3 @@
-import { Queue } from 'bullmq';
-import { Redis } from 'ioredis';
 import type { FastifyRequest } from 'fastify';
 import type { ScanType as ScanTypeEnum, ScanStatus as ScanStatusEnum } from '@haxvibe/shared-types';
 import { supabaseAdmin } from '../lib/supabase.js';
@@ -14,22 +12,6 @@ const SCAN_SCOPE_MAP: Record<string, string> = {
   active: 'active_scan',
   full: 'full',
 };
-
-// ---------------------------------------------------------------------------
-// BullMQ queue singleton (lazy-initialized to avoid blocking startup if Redis is down)
-// ---------------------------------------------------------------------------
-
-let _scanQueue: Queue | null = null;
-
-function getScanQueue(): Queue {
-  if (!_scanQueue) {
-    const conn = new Redis(config.REDIS_URL, { maxRetriesPerRequest: null });
-    _scanQueue = new Queue('scan', { connection: conn });
-  }
-  return _scanQueue;
-}
-
-export { _scanQueue as scanQueue };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -199,25 +181,29 @@ export async function createScan(
     },
   });
 
-  // 8. Enqueue BullMQ job
-  const bullJob = await getScanQueue().add('scan', {
-    scanJobId: scanJob.id,
-    domainId,
-    host: domain.host,
-    type,
-    isSharedHosting: domain.is_shared_hosting,
+  // 8. Trigger scan orchestrator (fire-and-forget)
+  const orchestratorUrl = config.SCAN_ORCHESTRATOR_URL;
+  const authToken = config.SCANNER_AUTH_TOKEN;
+
+  fetch(`${orchestratorUrl}/execute`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+    body: JSON.stringify({
+      scanJobId: scanJob.id,
+      domainId,
+      host: domain.host,
+      type,
+      isSharedHosting: domain.is_shared_hosting,
+    }),
+  }).catch((err) => {
+    // Log but don't fail the API response — the scan job is already in DB
+    req.log.error({ err, scanJobId: scanJob.id }, 'Failed to trigger scan orchestrator');
   });
 
-  // 9. Update scan_jobs with bull_job_id
-  await supabaseAdmin
-    .from('scan_jobs')
-    .update({ bull_job_id: bullJob.id ?? null })
-    .eq('id', scanJob.id);
-
-  return {
-    ...(scanJob as unknown as ScanJobRow),
-    bull_job_id: bullJob.id ?? null,
-  };
+  return scanJob as unknown as ScanJobRow;
 }
 
 // ---------------------------------------------------------------------------
@@ -341,14 +327,4 @@ export async function getScanById(
     host: domain.host as string,
     findings_summary,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Cleanup helper (called on server shutdown)
-// ---------------------------------------------------------------------------
-
-export async function closeScanQueue(): Promise<void> {
-  if (_scanQueue) {
-    await _scanQueue.close();
-  }
 }

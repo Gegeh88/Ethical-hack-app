@@ -12,9 +12,7 @@ import scansRoutes from './routes/scans.routes.js';
 import vulnerabilitiesRoutes from './routes/vulnerabilities.routes.js';
 import reportsRoutes from './routes/reports.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import internalRoutes from './routes/internal.routes.js';
 import { sql } from './lib/db.js';
-import { closeScanQueue } from './services/scan.service.js';
 
 async function buildServer() {
   const app = Fastify({
@@ -50,7 +48,6 @@ async function buildServer() {
   await app.register(vulnerabilitiesRoutes, { prefix: '/api/v1' });
   await app.register(reportsRoutes, { prefix: '/api/v1' });
   await app.register(adminRoutes, { prefix: '/api/v1/admin' });
-  await app.register(internalRoutes, { prefix: '/internal' });
 
   app.get('/api/v1/health', async () => {
     return {
@@ -71,7 +68,6 @@ async function main() {
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'Shutting down gracefully');
     await app.close();
-    await closeScanQueue();
     if (sql) await sql.end();
     process.exit(0);
   };
